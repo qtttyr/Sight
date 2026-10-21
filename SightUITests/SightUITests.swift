@@ -48,6 +48,20 @@ final class SightSecondRunTests: XCTestCase {
         app.buttons["Settings"].click()
         sleep(1)
         attach("14-second-run-settings")
+
+        app.buttons["LIGHT"].firstMatch.click()
+        app.buttons["Live"].click()
+        sleep(1)
+        attach("15-second-run-live-light")
+        app.buttons["Rules"].click()
+        sleep(1)
+        attach("16-second-run-rules-light")
+        app.buttons["Insights"].click()
+        sleep(1)
+        attach("17-second-run-insights-light")
+        app.buttons["Settings"].click()
+        sleep(1)
+        attach("18-second-run-settings-light")
     }
 }
 
