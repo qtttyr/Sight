@@ -62,6 +62,14 @@ final class SightSecondRunTests: XCTestCase {
         app.buttons["Settings"].click()
         sleep(1)
         attach("18-second-run-settings-light")
+
+        // Real sweep (review mode: proposals only, no file moves).
+        app.buttons["Live"].click()
+        let sweep = app.buttons["Sweep"]
+        XCTAssertTrue(sweep.waitForExistence(timeout: 5))
+        sweep.click()
+        sleep(6)
+        attach("19-second-run-sweep")
     }
 }
 
