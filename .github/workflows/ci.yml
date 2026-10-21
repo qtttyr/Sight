@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, '*/*-ci' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  core:
+    name: SightCore tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-swift@v6
+        with:
+          swift-version: '6.2'
+      - name: Run SightCore tests
+        run: |
+          cd SightCore
+          swift test --scratch-path .build

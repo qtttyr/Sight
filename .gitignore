@@ -1,0 +1,46 @@
+# macOS artifacts
+.DS_Store
+**/.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xcuserstate
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+
+# Derived build products
+/build/
+**/DerivedData/
+**/build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+Package.resolved
+.build/
+
+# Test products
+*.xcresult
+*.log
+
+# macOS entitlement previews
+*.entitlements.default
+
+# App container copies
+Sight.app/
+
+# Editor noise
+.swiftpm/
+.vscode/
+.idea/
+*.swp
+
+# shared caches
+.cache/
+node_modules/
+
+# local model copies that may be pulled during development
+SightCore/Sources/SightCore/ModelStore/models/

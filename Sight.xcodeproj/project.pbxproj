@@ -1,0 +1,595 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		685C217A3088A11900614897 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 685C21623088A11700614897 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 685C21693088A11700614897;
+			remoteInfo = Sight;
+		};
+		685C21843088A11900614897 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 685C21623088A11700614897 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 685C21693088A11700614897;
+			remoteInfo = Sight;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000004 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000002 /* SightCore */; };
+		A10000000000000000000005 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000003 /* SightCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		685C216A3088A11700614897 /* Sight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sight.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		685C21793088A11900614897 /* SightTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SightTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		685C21833088A11900614897 /* SightUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SightUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		685C216C3088A11700614897 /* Sight */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sight;
+			sourceTree = "<group>";
+		};
+		685C217C3088A11900614897 /* SightTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SightTests;
+			sourceTree = "<group>";
+		};
+		685C21863088A11900614897 /* SightUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SightUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		685C21673088A11700614897 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				A10000000000000000000004 /* SightCore in Frameworks */,
+			);
+		};
+		685C21763088A11900614897 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				A10000000000000000000005 /* SightCore in Frameworks */,
+			);
+		};
+		685C21803088A11900614897 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		685C21613088A11700614897 = {
+			isa = PBXGroup;
+			children = (
+				685C216C3088A11700614897 /* Sight */,
+				685C217C3088A11900614897 /* SightTests */,
+				685C21863088A11900614897 /* SightUITests */,
+				685C216B3088A11700614897 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		685C216B3088A11700614897 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				685C216A3088A11700614897 /* Sight.app */,
+				685C21793088A11900614897 /* SightTests.xctest */,
+				685C21833088A11900614897 /* SightUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		685C21693088A11700614897 /* Sight */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 685C218B3088A11900614897 /* Build configuration list for PBXNativeTarget "Sight" */;
+			buildPhases = (
+				685C21663088A11700614897 /* Sources */,
+				685C21673088A11700614897 /* Frameworks */,
+				685C21683088A11700614897 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				685C216C3088A11700614897 /* Sight */,
+			);
+			name = Sight;
+			packageProductDependencies = (
+				A10000000000000000000002 /* SightCore */,
+			);
+			productName = Sight;
+			productReference = 685C216A3088A11700614897 /* Sight.app */;
+			productType = "com.apple.product-type.application";
+		};
+		685C21783088A11900614897 /* SightTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 685C218E3088A11900614897 /* Build configuration list for PBXNativeTarget "SightTests" */;
+			buildPhases = (
+				685C21753088A11900614897 /* Sources */,
+				685C21763088A11900614897 /* Frameworks */,
+				685C21773088A11900614897 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				685C217B3088A11900614897 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				685C217C3088A11900614897 /* SightTests */,
+			);
+			name = SightTests;
+			packageProductDependencies = (
+				A10000000000000000000003 /* SightCore */,
+			);
+			productName = SightTests;
+			productReference = 685C21793088A11900614897 /* SightTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		685C21823088A11900614897 /* SightUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 685C21913088A11900614897 /* Build configuration list for PBXNativeTarget "SightUITests" */;
+			buildPhases = (
+				685C217F3088A11900614897 /* Sources */,
+				685C21803088A11900614897 /* Frameworks */,
+				685C21813088A11900614897 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				685C21853088A11900614897 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				685C21863088A11900614897 /* SightUITests */,
+			);
+			name = SightUITests;
+			productName = SightUITests;
+			productReference = 685C21833088A11900614897 /* SightUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		685C21623088A11700614897 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					685C21693088A11700614897 = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					685C21783088A11900614897 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 685C21693088A11700614897;
+					};
+					685C21823088A11900614897 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 685C21693088A11700614897;
+					};
+				};
+			};
+			buildConfigurationList = 685C21653088A11700614897 /* Build configuration list for PBXProject "Sight" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 685C21613088A11700614897;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				A10000000000000000000001 /* XCLocalSwiftPackageReference "SightCore" */,
+			);
+			productRefGroup = 685C216B3088A11700614897 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				685C21693088A11700614897 /* Sight */,
+				685C21783088A11900614897 /* SightTests */,
+				685C21823088A11900614897 /* SightUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		685C21683088A11700614897 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		685C21773088A11900614897 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		685C21813088A11900614897 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		685C21663088A11700614897 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		685C21753088A11900614897 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		685C217F3088A11900614897 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		685C217B3088A11900614897 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 685C21693088A11700614897 /* Sight */;
+			targetProxy = 685C217A3088A11900614897 /* PBXContainerItemProxy */;
+		};
+		685C21853088A11900614897 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 685C21693088A11700614897 /* Sight */;
+			targetProxy = 685C21843088A11900614897 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000001 /* XCLocalSwiftPackageReference "SightCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SightCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000002 /* SightCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SightCore;
+		};
+		A10000000000000000000003 /* SightCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SightCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCBuildConfiguration section */
+		685C21893088A11900614897 /* Debug configuration for PBXProject "Sight" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		685C218A3088A11900614897 /* Release configuration for PBXProject "Sight" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		685C218C3088A11900614897 /* Debug configuration for PBXNativeTarget "Sight" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		685C218D3088A11900614897 /* Release configuration for PBXNativeTarget "Sight" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		685C218F3088A11900614897 /* Debug configuration for PBXNativeTarget "SightTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sight";
+			};
+			name = Debug;
+		};
+		685C21903088A11900614897 /* Release configuration for PBXNativeTarget "SightTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sight";
+			};
+			name = Release;
+		};
+		685C21923088A11900614897 /* Debug configuration for PBXNativeTarget "SightUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Sight;
+			};
+			name = Debug;
+		};
+		685C21933088A11900614897 /* Release configuration for PBXNativeTarget "SightUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Sight contributors. Apache-2.0.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.sight.mac.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = Sight;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		685C21653088A11700614897 /* Build configuration list for PBXProject "Sight" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				685C21893088A11900614897 /* Debug configuration for PBXProject "Sight" */,
+				685C218A3088A11900614897 /* Release configuration for PBXProject "Sight" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		685C218B3088A11900614897 /* Build configuration list for PBXNativeTarget "Sight" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				685C218C3088A11900614897 /* Debug configuration for PBXNativeTarget "Sight" */,
+				685C218D3088A11900614897 /* Release configuration for PBXNativeTarget "Sight" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		685C218E3088A11900614897 /* Build configuration list for PBXNativeTarget "SightTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				685C218F3088A11900614897 /* Debug configuration for PBXNativeTarget "SightTests" */,
+				685C21903088A11900614897 /* Release configuration for PBXNativeTarget "SightTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		685C21913088A11900614897 /* Build configuration list for PBXNativeTarget "SightUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				685C21923088A11900614897 /* Debug configuration for PBXNativeTarget "SightUITests" */,
+				685C21933088A11900614897 /* Release configuration for PBXNativeTarget "SightUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 685C21623088A11700614897 /* Project object */;
+	validationLevel = 1;
+}
