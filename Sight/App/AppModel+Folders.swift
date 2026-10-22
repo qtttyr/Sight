@@ -47,11 +47,12 @@ extension AppModel {
         saveRules()
     }
 
-    func addRule(name: String, prompt: String, destination: URL) {
+    func addRule(name: String, prompt: String, destination: URL, threshold: Float? = nil) {
         let rule = CategoryRule(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             prompt: prompt.trimmingCharacters(in: .whitespacesAndNewlines),
-            destination: destination
+            destination: destination,
+            threshold: threshold
         )
         guard rule.isValid else { return }
         rules.append(rule)
@@ -87,28 +88,29 @@ extension AppModel {
         return base.appendingPathComponent(name, isDirectory: true)
     }
 
+    /// A tidy folder name derived from a rule name: "Side project files" →
+    /// "Side project files", with path-hostile characters collapsed.
+    static func folderName(from ruleName: String) -> String {
+        let cleaned = ruleName
+            .components(separatedBy: CharacterSet(charactersIn: "/\\:"))
+            .joined(separator: " ")
+        let collapsed = cleaned
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        let trimmed = collapsed.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? "Unsorted" : trimmed
+    }
+
     private static func presetRules(root: URL) -> [CategoryRule] {
-        [
-            CategoryRule(
-                name: "Work",
-                prompt: "contracts, invoices, financial reports, spreadsheets, resumes, NDAs, presentations, business documents",
-                destination: root.appendingPathComponent("Work", isDirectory: true)
-            ),
-            CategoryRule(
-                name: "Code",
-                prompt: "source code, scripts, configuration files, repositories, JSON, Swift, Python, JavaScript, terminal logs",
-                destination: root.appendingPathComponent("Code", isDirectory: true)
-            ),
-            CategoryRule(
-                name: "Design",
-                prompt: "design files, mockups, screenshots, images, fonts, UI assets, product photos, visual references",
-                destination: root.appendingPathComponent("Design", isDirectory: true)
-            ),
-            CategoryRule(
-                name: "Junk",
-                prompt: "memes, random downloads, temporary screenshots, duplicates, installers, archives, graphical clutter",
-                destination: root.appendingPathComponent("Junk", isDirectory: true)
-            )
-        ]
+        RuleLibrary.starterRules.map { template in
+            var rule = template.rule(root: root)
+            if template.id == "junk" {
+                // Clutter folding is opt-in: wrong "junk" calls are the most
+                // annoying kind of mistake, so it ships switched off.
+                rule.isEnabled = false
+            }
+            return rule
+        }
     }
 }

@@ -10,6 +10,7 @@ public enum AppPaths {
     public static var configURL: URL { applicationSupport.appendingPathComponent("config.json") }
     public static var rulesURL: URL { applicationSupport.appendingPathComponent("rules.json") }
     public static var journalURL: URL { applicationSupport.appendingPathComponent("journal.jsonl") }
+    public static var scanMemoryURL: URL { applicationSupport.appendingPathComponent("scan-memory.json") }
     public static var modelsDirectory: URL { applicationSupport.appendingPathComponent("Models", isDirectory: true) }
     public static var modelDirectory: URL { modelsDirectory.appendingPathComponent("EmbeddingGemma2", isDirectory: true) }
 

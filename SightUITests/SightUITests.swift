@@ -135,9 +135,25 @@ final class SightScreenshotTests: XCTestCase {
         attach("09-settings-light")
 
         // Command palette is reachable from the sidebar as well as ⌘K.
-        click("Command Palette", in: app)
+        let palettePill = app.windows.firstMatch.buttons["Command Palette"]
+        XCTAssertTrue(palettePill.waitForExistence(timeout: 5), "Missing button: Command Palette")
+        palettePill.click()
         usleep(900_000)
         attach("10-palette-light")
+
+        // Close the palette before opening the field guide.
+        app.typeKey(.escape, modifierFlags: [])
+        usleep(500_000)
+
+        // The field guide opens from the sidebar footer.
+        let help = app.windows.firstMatch.buttons["How it works"]
+        XCTAssertTrue(help.waitForExistence(timeout: 5), "Missing button: How it works")
+        help.click()
+        usleep(900_000)
+        attach("11-help-light")
+        let close = app.buttons.matching(NSPredicate(format: "label == 'Close'")).firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "Missing button: Close")
+        close.click()
     }
 }
 
@@ -152,15 +168,29 @@ final class SightRealSetupTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
         sleep(8)
-        let button = app.buttons["Begin"]
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "onboarding-real"
         attachment.lifetime = .keepAlways
         add(attachment)
-        print("BEGIN_STATE=\(button.exists)")
+
+        // Onboarding may already be complete on this machine; then the app
+        // opens the shell directly and the setup flow is a no-op.
+        if !app.buttons["Begin"].waitForExistence(timeout: 10) {
+            XCTAssertTrue(
+                app.buttons["Live"].waitForExistence(timeout: 30),
+                "App shows neither onboarding nor the main shell"
+            )
+            let modelReady = app.staticTexts
+                .matching(NSPredicate(format: "label CONTAINS 'READY'"))
+                .firstMatch
+                .waitForExistence(timeout: 180)
+            XCTAssertTrue(modelReady, "Model did not reach READY on an already-onboarded launch")
+            return
+        }
+
+        print("BEGIN_STATE=true")
         print(app.debugDescription)
-        XCTAssertTrue(button.waitForExistence(timeout: 60))
-        button.click()
+        app.buttons["Begin"].click()
         usleep(500_000)
         app.buttons["Use Downloads"].click()
         usleep(1_200_000)

@@ -4,10 +4,10 @@ import SwiftUI
 struct RulesView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.sightTheme) private var theme
-    @State private var showEditor = false
     @State private var testText = ""
 
     var body: some View {
+        @Bindable var model = model
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 SectionHeader(
@@ -16,7 +16,7 @@ struct RulesView: View {
                 )
                 Spacer()
                 Button("New Rule") {
-                    showEditor = true
+                    model.activeSheet = .ruleEditor
                 }
                 .buttonStyle(SightButtonStyle(kind: .primary))
             }
@@ -46,7 +46,7 @@ struct RulesView: View {
                         EmptyState(
                             icon: "square.stack.3d.up",
                             title: "No rules yet.",
-                            subtitle: "Add a category and describe what belongs in it."
+                            subtitle: "Add a category — start from a tuned template or write your own."
                         )
                         .frame(minHeight: 220)
                     }
@@ -62,11 +62,6 @@ struct RulesView: View {
         .padding(.horizontal, 40)
         .padding(.top, 38)
         .padding(.bottom, 28)
-        .sheet(isPresented: $showEditor) {
-            RuleEditorSheet()
-                .environment(model)
-                .sightTheme(model.config.theme)
-        }
     }
 
     private var testCard: some View {

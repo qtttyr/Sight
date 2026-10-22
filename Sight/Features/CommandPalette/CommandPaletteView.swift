@@ -45,6 +45,12 @@ struct CommandPaletteView: View {
                 shortcut: "⌘,"
             ) { model.section = .settings },
             PaletteCommand(
+                title: "New Rule",
+                subtitle: "Pick a template or write your own",
+                icon: "plus.circle",
+                shortcut: "⌘N"
+            ) { model.section = .rules; model.activeSheet = .ruleEditor },
+            PaletteCommand(
                 title: "Choose Folder…",
                 subtitle: "Change the watched folder",
                 icon: "folder",

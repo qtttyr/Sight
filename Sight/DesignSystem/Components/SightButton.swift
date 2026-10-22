@@ -53,6 +53,7 @@ struct SightIconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(help)
         .onHover { isHovering = $0 }
         .help(help)
     }

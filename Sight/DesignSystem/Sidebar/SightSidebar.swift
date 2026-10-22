@@ -7,6 +7,7 @@ struct SightSidebar: View {
     let modelState: ModelState
     let rootDisplayPath: String
     let onTheme: (ThemeMode) -> Void
+    let onHelp: () -> Void
 
     @Environment(\.sightTheme) private var theme
     @Namespace private var selectionNamespace
@@ -81,13 +82,32 @@ struct SightSidebar: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 themeSwitch
-                    .frame(width: 132)
                 paletteButton
-                Spacer()
+                helpButton
+                Spacer(minLength: 0)
             }
         }
+    }
+
+    private var helpButton: some View {
+        Button {
+            onHelp()
+        } label: {
+            Text("?")
+                .font(SightFont.micro())
+                .tracking(0.08)
+                .foregroundStyle(theme.textTertiary)
+                .fixedSize()
+                .padding(.horizontal, 9)
+                .frame(height: 20)
+        }
+        .buttonStyle(.plain)
+        .background {
+            Capsule().stroke(theme.line, lineWidth: 1)
+        }
+        .accessibilityLabel("How it works")
     }
 
     private var paletteButton: some View {
@@ -96,19 +116,16 @@ struct SightSidebar: View {
         } label: {
             Text("⌘K")
                 .font(SightFont.micro())
+                .tracking(0.08)
                 .foregroundStyle(isPaletteHovering ? theme.textPrimary : theme.textTertiary)
-                .padding(.horizontal, 10)
+                .fixedSize()
+                .padding(.horizontal, 9)
                 .frame(height: 20)
-                .background {
-                    if isPaletteHovering {
-                        Capsule().fill(theme.hover)
-                    }
-                }
-                .overlay {
-                    Capsule().stroke(theme.line, lineWidth: 1)
-                }
         }
         .buttonStyle(.plain)
+        .background {
+            Capsule().stroke(theme.line, lineWidth: 1)
+        }
         .accessibilityLabel("Command Palette")
         .onHover { hovering in
             withAnimation(SightMotion.quick) {
@@ -121,12 +138,11 @@ struct SightSidebar: View {
         HStack(spacing: 2) {
             themeButton("DARK", mode: .dark)
             themeButton("LIGHT", mode: .light)
-            Spacer()
         }
         .padding(2)
         .background(theme.hover)
         .clipShape(Capsule())
-        .frame(width: 132)
+        .fixedSize()
     }
 
     private func themeButton(_ title: String, mode: ThemeMode) -> some View {

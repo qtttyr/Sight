@@ -6,6 +6,11 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000004 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000002 /* SightCore */; };
+		A10000000000000000000005 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000003 /* SightCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		685C217A3088A11900614897 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -22,11 +27,6 @@
 			remoteInfo = Sight;
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXBuildFile section */
-		A10000000000000000000004 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000002 /* SightCore */; };
-		A10000000000000000000005 /* SightCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000003 /* SightCore */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		685C216A3088A11700614897 /* Sight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sight.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -194,10 +194,10 @@
 			);
 			mainGroup = 685C21613088A11700614897;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				A10000000000000000000001 /* XCLocalSwiftPackageReference "SightCore" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 685C216B3088A11700614897 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -257,24 +257,6 @@
 			targetProxy = 685C21843088A11900614897 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		A10000000000000000000001 /* XCLocalSwiftPackageReference "SightCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = SightCore;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A10000000000000000000002 /* SightCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SightCore;
-		};
-		A10000000000000000000003 /* SightCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SightCore;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		685C21893088A11900614897 /* Debug configuration for PBXProject "Sight" */ = {
@@ -396,8 +378,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -428,8 +410,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -459,8 +441,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -484,8 +466,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -508,8 +490,8 @@
 		685C21923088A11900614897 /* Debug configuration for PBXNativeTarget "SightUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -532,8 +514,8 @@
 		685C21933088A11900614897 /* Release configuration for PBXNativeTarget "SightUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Sight.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -589,6 +571,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000001 /* XCLocalSwiftPackageReference "SightCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SightCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000002 /* SightCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SightCore;
+		};
+		A10000000000000000000003 /* SightCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SightCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 685C21623088A11700614897 /* Project object */;
 	validationLevel = 1;

@@ -26,6 +26,8 @@ public struct SortSummary: Sendable {
     public let review: Int
     public let unrecognized: Int
     public let failed: Int
+    /// Files SkipMemory answered from memory instead of the model.
+    public let skipped: Int
     public let duration: Duration
 }
 
@@ -72,6 +74,7 @@ public actor Sorter {
         root: URL,
         rules: [CategoryRule],
         config: SightConfig,
+        memory: ScanMemory? = nil,
         progress: @escaping @Sendable (SortProgress) -> Void
     ) async -> SortSummary {
         let started = ContinuousClock.now
@@ -82,12 +85,32 @@ public actor Sorter {
         var review = 0
         var unrecognized = 0
         var failed = 0
+        var skipped = 0
 
         for (index, file) in files.enumerated() {
             guard scanner.isReady(file) else { continue }
+
+            // Already sorted, already reviewed or already skipped, and the
+            // file has not changed since: answer from memory, not the model.
+            if let remembered = memory?.cachedEntry(for: file), let decision = self.decision(for: file, from: remembered, rules: rules) {
+                decisions.append(decision)
+                skipped += 1
+                memory?.record(for: file, decision: decision) // refreshes last seen
+                progress(SortProgress(
+                    processed: index + 1,
+                    total: files.count,
+                    currentName: file.name,
+                    moved: moved,
+                    review: review,
+                    unrecognized: unrecognized
+                ))
+                continue
+            }
+
             do {
                 let decision = try await classify(file: file, rules: rules, config: config)
                 decisions.append(decision)
+                memory?.record(for: file, decision: decision)
                 let event = try await apply(decision: decision, config: config)
                 events.append(event)
                 switch event.outcome {
@@ -124,7 +147,30 @@ public actor Sorter {
             review: review,
             unrecognized: unrecognized,
             failed: failed,
+            skipped: skipped,
             duration: ContinuousClock.now - started
+        )
+    }
+
+    /// Rebuilds a routing decision from a remembered classification. The rule
+    /// must still exist and carry the same id, otherwise the decision is
+    /// re-computed from scratch.
+    private func decision(
+        for file: FileSnapshot,
+        from entry: ScanMemoryEntry,
+        rules: [CategoryRule]
+    ) -> RoutingDecision? {
+        let rule = rules.first { $0.id == entry.ruleID }
+        if entry.ruleID != nil && rule == nil { return nil }
+        let ranking: [(ruleID: UUID, name: String, score: Float)] =
+            rule.map { [($0.id, $0.name, entry.score)] } ?? []
+        return RoutingDecision(
+            file: file,
+            rule: rule,
+            score: entry.score,
+            runnerUp: 0,
+            accepted: entry.accepted,
+            ranking: ranking
         )
     }
 

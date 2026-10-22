@@ -20,7 +20,8 @@ struct AppShellView: View {
                     themeMode: model.config.theme,
                     modelState: model.modelState,
                     rootDisplayPath: model.rootDisplayPath,
-                    onTheme: { model.setTheme($0) }
+                    onTheme: { model.setTheme($0) },
+                    onHelp: { model.activeSheet = .help }
                 )
 
                 content
@@ -46,6 +47,23 @@ struct AppShellView: View {
         .background(theme.ink)
         .onReceive(NotificationCenter.default.publisher(for: .sightShowPalette)) { _ in
             withAnimation(SightMotion.quick) { showPalette = true }
+        }
+        .sheet(item: $model.activeSheet) { sheet in
+            sheetContent(sheet)
+                .environment(model)
+                .sightTheme(model.config.theme)
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: AppSheet) -> some View {
+        switch sheet {
+        case .review:
+            ReviewView()
+        case .help:
+            HelpSheet()
+        case .ruleEditor:
+            RuleEditorSheet()
         }
     }
 

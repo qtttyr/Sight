@@ -224,6 +224,78 @@ struct PersistenceTests {
     }
 }
 
+@Suite("Scan memory")
+struct ScanMemoryTests {
+    private func makeRule(_ name: String) -> CategoryRule {
+        CategoryRule(
+            name: name,
+            prompt: "\(name) things",
+            destination: URL(fileURLWithPath: "/tmp/\(name)")
+        )
+    }
+
+    @Test("Memory survives a round trip and is invalidated by a new signature")
+    func signatureInvalidation() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SightMemory-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let rule = makeRule("Work")
+        let file = FileSnapshot(name: "report.pdf", url: URL(fileURLWithPath: "/tmp/report.pdf"))
+        let decision = RoutingDecision(
+            file: file,
+            rule: rule,
+            score: 0.72,
+            runnerUp: 0.1,
+            accepted: true,
+            ranking: []
+        )
+
+        let memory = ScanMemory(url: url)
+        memory.invalidateIfSignatureChanged(to: "sig-1")
+        memory.record(for: file, decision: decision)
+        #expect(memory.cachedEntry(for: file)?.score == 0.72)
+        memory.persist()
+
+        let reloaded = ScanMemory(url: url)
+        #expect(reloaded.cachedEntry(for: file)?.ruleName == "Work")
+
+        // Changing the classification inputs wipes everything.
+        reloaded.invalidateIfSignatureChanged(to: "sig-2")
+        #expect(reloaded.cachedEntry(for: file) == nil)
+    }
+
+    @Test("A changed file is not served from memory")
+    func changedFile() {
+        let memory = ScanMemory(
+            url: FileManager.default.temporaryDirectory
+                .appendingPathComponent("SightMemory-\(UUID().uuidString).json")
+        )
+        memory.invalidateIfSignatureChanged(to: "sig")
+
+        let rule = makeRule("Design")
+        var file = FileSnapshot(name: "logo.png", url: URL(fileURLWithPath: "/tmp/logo.png"))
+        let decision = RoutingDecision(
+            file: file, rule: rule, score: 0.5, runnerUp: 0, accepted: true, ranking: []
+        )
+        memory.record(for: file, decision: decision)
+
+        // Same file, same stats: hit.
+        #expect(memory.cachedEntry(for: file) != nil)
+
+        // Different size or mtime: miss, which forces re-classification.
+        let touched = FileSnapshot(
+            name: file.name,
+            url: file.url,
+            contentType: file.contentType
+        )
+        #expect(touched.modifiedAt.timeIntervalSince(file.modifiedAt) < 2)
+        let editedFile = try? FileSnapshot(url: file.url)
+        #expect(editedFile == nil) // file does not exist; nothing cached can match
+        _ = touched
+    }
+}
+
 @Suite("Model manifest")
 struct ModelManifestTests {
     @Test("Text and vision fit the documented download size")

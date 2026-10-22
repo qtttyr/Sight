@@ -53,13 +53,16 @@ final class AppModel {
     var ruleFingerprints: [UUID: [Float]] = [:]
     var modelDiskUsage: Int64 = 0
     var testDecision: RoutingDecision?
-    var isShowingRuleEditor = false
-    var isShowingReview = false
+
+    /// The app has a single modal layer: only one sheet can own the window's
+    /// presentation context, so every modal in Sight is routed through here.
+    var activeSheet: AppSheet?
 
     @ObservationIgnored let configStore = ConfigStore()
     @ObservationIgnored let ruleStore = RuleStore()
     @ObservationIgnored let modelStore = ModelStore()
     @ObservationIgnored let journal = Journal(url: AppPaths.journalURL)
+    @ObservationIgnored lazy var scanMemory = ScanMemory()
 
     @ObservationIgnored var provider: CoreAIEmbeddingProvider?
     @ObservationIgnored var sorter: Sorter?
