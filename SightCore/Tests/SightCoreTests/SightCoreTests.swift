@@ -65,13 +65,11 @@ struct ClassificationTests {
         let decision = try await service.classify(
             context: context("invoice for the studio"),
             rules: rules,
-            threshold: 0.3,
-            margin: 0.01,
             dimension: 4
         )
         #expect(decision.rule?.name == "Finance")
         #expect(decision.accepted)
-        #expect(decision.score > 0.9)
+        #expect(decision.score > 0.8)
     }
 
     @Test("A weak signal is not accepted")
@@ -82,9 +80,8 @@ struct ClassificationTests {
         let decision = try await service.classify(
             context: context("something entirely unrelated"),
             rules: rules,
-            threshold: 0.9,
-            margin: 0.5,
-            dimension: 4
+            dimension: 4,
+            confidence: 0.99
         )
         #expect(!decision.accepted)
     }
@@ -195,12 +192,12 @@ struct PersistenceTests {
 
         let store = JSONStore(url: url, defaultValue: SightConfig())
         var config = try await store.load()
-        config.threshold = 0.42
+        config.confidence = 0.8
         config.mode = .auto
         try await store.save(config)
 
         let reloaded = try await JSONStore(url: url, defaultValue: SightConfig()).load()
-        #expect(reloaded.threshold == 0.42)
+        #expect(reloaded.confidence == 0.8)
         #expect(reloaded.mode == .auto)
     }
 
@@ -274,7 +271,7 @@ struct ScanMemoryTests {
         memory.invalidateIfSignatureChanged(to: "sig")
 
         let rule = makeRule("Design")
-        var file = FileSnapshot(name: "logo.png", url: URL(fileURLWithPath: "/tmp/logo.png"))
+        let file = FileSnapshot(name: "logo.png", url: URL(fileURLWithPath: "/tmp/logo.png"))
         let decision = RoutingDecision(
             file: file, rule: rule, score: 0.5, runnerUp: 0, accepted: true, ranking: []
         )
@@ -328,5 +325,161 @@ struct MockEmbeddingProvider: EmbeddingProviding {
             return [0, 1, 0, 0]
         }
         return [0, 0, 1, 0]
+    }
+}
+
+
+@Suite("Type evidence")
+struct TypeAnalyzerTests {
+    private func profile(_ name: String, image: ImageFacts? = nil) -> TypeProfile {
+        let snapshot = FileSnapshot(
+            name: name,
+            url: URL(fileURLWithPath: "/tmp/\(name)"),
+            contentType: image == nil ? .data : .png
+        )
+        return TypeAnalyzer().analyze(file: snapshot, image: image)
+    }
+
+    @Test("Video, audio and archives are near certain")
+    func media() {
+        #expect(profile("clip.mp4").boosts[.video] ?? 0 > 0.9)
+        #expect(profile("song.flac").boosts[.audio] ?? 0 > 0.9)
+        #expect(profile("app.dmg").boosts[.archives] ?? 0 > 0.9)
+    }
+
+    @Test("A PDF can never be a video or a photo")
+    func exclusions() {
+        let pdf = profile("report.pdf")
+        #expect(pdf.excludes.contains(.video))
+        #expect(pdf.excludes.contains(.photos))
+    }
+
+    @Test("Developer files without extension are recognised")
+    func devFiles() {
+        #expect(profile("Modelfile").boosts[.code] ?? 0 > 0.9)
+        #expect(profile("Dockerfile").boosts[.code] ?? 0 > 0.9)
+    }
+
+    @Test("Screenshot names in several languages")
+    func screenshotNames() {
+        let names = ["Screenshot 2026-10-12 at 09.28.png", "Снимок экрана 2026-10-12.png", "Bildschirmfoto 2026.png"]
+        for name in names {
+            let facts = ImageFacts(pixelWidth: 100, pixelHeight: 100)
+            #expect(profile(name, image: facts).boosts[.screenshots] ?? 0 > 0.9, "\(name)")
+        }
+    }
+
+    @Test("A PNG with an exact phone-screen size is a screenshot")
+    func phoneScreen() {
+        let facts = ImageFacts(pixelWidth: 1170, pixelHeight: 2532)
+        #expect(profile("IMG_0059.PNG", image: facts).boosts[.screenshots] ?? 0 > 0.8)
+    }
+
+    @Test("Camera metadata makes a photo and rules out a screenshot")
+    func camera() {
+        let facts = ImageFacts(pixelWidth: 4032, pixelHeight: 3024, hasCameraMetadata: true)
+        let result = profile("IMG_1234.JPG", image: facts)
+        #expect(result.boosts[.photos] ?? 0 > 0.9)
+        #expect(result.excludes.contains(.screenshots))
+    }
+}
+
+@Suite("Name cleaning and rules")
+struct NameAndRuleTests {
+    @Test("Counters and camera names carry no information")
+    func informative() {
+        #expect(!NameCleaner.isInformative(NameCleaner.clean("IMG_0059.PNG")))
+        #expect(!NameCleaner.isInformative(NameCleaner.clean("Screenshot 2026-10-11 at 22.25.43.png")))
+        #expect(NameCleaner.isInformative(NameCleaner.clean("pixel_art_kitchen_atlas_2K.jpg")))
+    }
+
+    @Test("Separators become spaces and years survive")
+    func cleaning() {
+        #expect(NameCleaner.clean("tax_return_2025.pdf") == "tax return 2025")
+        #expect(NameCleaner.clean("Student worksheet_Critical reading 1.docx") == "Student worksheet Critical reading")
+    }
+
+    @Test("A prompt is split into separate anchors and includes the name")
+    func anchors() {
+        let rule = CategoryRule(
+            name: "Work",
+            prompt: "invoice or receipt, signed contract;\nresume",
+            destination: URL(fileURLWithPath: "/tmp/Work")
+        )
+        #expect(rule.anchors == ["invoice or receipt", "signed contract", "resume", "Work"])
+    }
+
+    @Test("Rule kind comes from the library id or an unambiguous name")
+    func kinds() {
+        let library = CategoryRule(name: "Anything", prompt: "x", destination: URL(fileURLWithPath: "/tmp/a"), libraryID: "video")
+        #expect(library.kind == .video)
+        let named = CategoryRule(name: "Музыка", prompt: "x", destination: URL(fileURLWithPath: "/tmp/b"))
+        #expect(named.kind == .audio)
+        let ambiguous = CategoryRule(name: "Work photos", prompt: "x", destination: URL(fileURLWithPath: "/tmp/c"))
+        #expect(ambiguous.kind == nil)
+    }
+}
+
+@Suite("Batches and learning")
+struct BatchTests {
+    @Test("A batch is undone as one step")
+    func batchUndo() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SightBatch-\(UUID().uuidString)", isDirectory: true)
+        let target = root.appendingPathComponent("Work", isDirectory: true)
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let journal = Journal(url: root.appendingPathComponent("journal.jsonl"))
+        let batch = UUID()
+        for name in ["a.txt", "b.txt", "c.txt"] {
+            let destination = target.appendingPathComponent(name)
+            try Data(name.utf8).write(to: destination)
+            try await journal.record(JournalEntry(
+                fileName: name,
+                source: root.appendingPathComponent(name),
+                destination: destination,
+                category: "Work",
+                score: 0.9,
+                batchID: batch
+            ))
+        }
+
+        let entries = try await journal.lastBatch()
+        #expect(entries.count == 3)
+        let restored = try await journal.undo(batch: entries)
+        #expect(restored == 3)
+        #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("b.txt").path))
+        #expect(try await journal.lastBatch().isEmpty)
+    }
+
+    @Test("Examples survive a round trip and are capped")
+    func examples() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SightExamples-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let rule = UUID()
+        let store = ExampleStore(url: url)
+        for index in 0..<(ExampleStore.capacityPerRule + 5) {
+            store.add(LearnedExample(ruleID: rule, isImage: false, vector: [Float(index), 1], fileName: "f\(index)"))
+        }
+        #expect(store.count(for: rule) == ExampleStore.capacityPerRule)
+        store.persist()
+        let reloaded = ExampleStore(url: url)
+        #expect(reloaded.count(for: rule) == ExampleStore.capacityPerRule)
+        #expect(reloaded.vectors(isImage: false)[rule]?.first?.count == 2)
+    }
+
+    @Test("A type that rules a category out removes it from the choice")
+    func exclusionRouting() async throws {
+        let finance = CategoryRule(name: "Finance", prompt: "invoice receipt", destination: URL(fileURLWithPath: "/tmp/F"))
+        let photos = CategoryRule(name: "Photos", prompt: "photo image", destination: URL(fileURLWithPath: "/tmp/P"), libraryID: "photos")
+        let service = ClassificationService(provider: MockEmbeddingProvider())
+        try await service.prepare(rules: [finance, photos])
+        let file = FileSnapshot(name: "photo of invoice.pdf", url: URL(fileURLWithPath: "/tmp/photo of invoice.pdf"))
+        let profile = TypeAnalyzer().analyze(file: file)
+        let context = FileContext(file: file, payload: .text("photo image photo"), profile: profile)
+        let decision = try await service.classify(context: context, rules: [finance, photos], dimension: 4)
+        #expect(decision.rule?.name == "Finance")
     }
 }

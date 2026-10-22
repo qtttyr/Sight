@@ -60,53 +60,94 @@ extension AppModel {
         if !isDemoMode {
             scanMemory.pruneMissing()
             scanMemory.persist()
-            republishRememberedReviews()
         }
 
-        if !isAutoMode {
-            pendingDecisions = summary.decisions
-                .filter { $0.accepted }
-                .sorted { $0.score > $1.score }
+        // Every file that has a candidate category and was not moved lands in
+        // the queue: confident ones first, doubtful ones after, nothing lost.
+        pendingDecisions = summary.proposals
+        await refreshFolderSuggestions(from: summary)
+    }
+
+    // MARK: - New folders
+
+    /// Files that fit no current rule, offered to the discovery step.
+    private func leftovers(in summary: SortSummary) -> [RoutingDecision] {
+        return Self.discoveryCandidates(summary.decisions, proposals: summary.proposals)
+    }
+
+    /// Everything that was routed by meaning alone and is still in the
+    /// folder: doubtful files and confident ones alike, because a group can
+    /// have a confident-looking home that is still the wrong place for it.
+    /// Files decided by hard evidence (type, metadata) never take part.
+    nonisolated static func discoveryCandidates(
+        _ decisions: [RoutingDecision],
+        proposals: [RoutingDecision]
+    ) -> [RoutingDecision] {
+        let waiting = Set(proposals.map(\.id))
+        return decisions.filter { decision in
+            guard waiting.contains(decision.id) else { return false }
+            return !decision.accepted || decision.reason?.hasPrefix("Matches") == true
+        }
+        .prefix(150).map { $0 }
+    }
+
+    func refreshFolderSuggestions(from summary: SortSummary) async {
+        guard let sorter, !isDemoMode else { return }
+        let found = await sorter.discoverFolders(
+            leftovers: leftovers(in: summary),
+            rules: rules,
+            config: config
+        )
+        // In Auto mode a strong, clearly named group gets its folder right
+        // away; otherwise the user decides with one click.
+        if isAutoMode {
+            var created: [FolderSuggestion] = []
+            for suggestion in found where suggestion.count >= 6 && suggestion.coherence >= 0.4 {
+                await acceptSuggestion(suggestion)
+                created.append(suggestion)
+            }
+            folderSuggestions = found.filter { candidate in !created.contains { $0.id == candidate.id } }
+        } else {
+            folderSuggestions = found
         }
     }
 
-    /// Confident decisions that still sit untouched in the watched root from
-    /// an earlier session rejoin the review queue, sorted by certainty.
-    private func republishRememberedReviews() {
+    /// Creates the folder and its rule, then moves the group into it.
+    func acceptSuggestion(_ suggestion: FolderSuggestion) async {
         guard let rootURL else { return }
-        let analyzedKeys = Set(scanMemory.awaitingReview.map(\.filePath))
-        for entry in scanMemory.awaitingReview {
-            let url = URL(fileURLWithPath: entry.filePath)
-            guard url.deletingLastPathComponent().standardizedFileURL
-                == rootURL.standardizedFileURL
-            else { continue }
-            guard !pendingDecisions.contains(where: { $0.file.id == entry.filePath })
-            else { continue }
-            guard let file = try? FileSnapshot(url: url) else { continue }
-            let rule = rules.first { $0.id == entry.ruleID }
-            pendingDecisions.append(RoutingDecision(
-                file: file,
-                rule: rule,
-                score: entry.score,
-                runnerUp: 0,
-                accepted: true,
-                ranking: rule.map { [($0.id, $0.name, entry.score)] } ?? []
-            ))
+        let destination = rootURL.appendingPathComponent(Self.folderName(from: suggestion.name), isDirectory: true)
+        guard let rule = addRule(name: suggestion.name, prompt: suggestion.prompt, destination: destination) else { return }
+        try? await sorter?.prepare(rules: rules)
+        let batch = UUID()
+        var moved = 0
+        for decision in suggestion.decisions {
+            if await approve(decision, as: rule, batch: batch) { moved += 1 }
         }
-        pendingDecisions.sort { $0.score > $1.score }
-        _ = analyzedKeys
+        folderSuggestions.removeAll { $0.id == suggestion.id }
+        if moved > 0 {
+            notice = "Created “\(suggestion.name)” and sorted \(moved) \(moved == 1 ? "file" : "files") into it."
+        }
     }
+
+    func dismissSuggestion(_ suggestion: FolderSuggestion) {
+        config.dismissedFolders.append(suggestion.name)
+        saveConfig()
+        folderSuggestions.removeAll { $0.id == suggestion.id }
+    }
+
 
     /// Memory is invalidated by any change to the inputs the classifier sees:
-    /// the rules themselves, or the confidence settings.
+    /// the rules themselves, the confidence bar, and the classifier itself.
     static func classificationSignature(
         rules: [CategoryRule],
         config: SightConfig
     ) -> String {
         var parts: [String] = [
-            "t\(String(format: "%.3f", config.threshold))",
-            "m\(String(format: "%.3f", config.margin))",
-            "d\(config.dimension.rawValue)"
+            "engine\(Self.engineVersion)",
+            "r\(config.renameFiles ? 1 : 0)",
+            "c\(String(format: "%.3f", config.confidence))",
+            "d\(config.dimension.rawValue)",
+            "v\(config.loadVision ? 1 : 0)"
         ]
         for rule in rules {
             parts.append("\(rule.id.uuidString)|\(rule.name)|\(rule.prompt)|\(rule.destination.path)|\(rule.threshold.map { String($0) } ?? "-")|\(rule.isEnabled ? "1" : "0")")
@@ -114,20 +155,25 @@ extension AppModel {
         return parts.joined(separator: "\n")
     }
 
+    /// Bumped whenever the classifier's behavior changes, so decisions made
+    /// by an older engine are never served from memory.
+    static let engineVersion = 4
+
     func handleLive(urls: [URL]) async {
         guard let sorter, let rootURL, !isSweeping, modelState.isReady else { return }
         let outcomes = await sorter.process(urls: urls, root: rootURL, rules: rules, config: config)
         for outcome in outcomes {
             appendEvent(outcome.event)
-            if !isDemoMode {
+            if !isDemoMode, outcome.event.outcome != .failed {
                 scanMemory.record(for: outcome.decision.file, decision: outcome.decision)
             }
-            if outcome.event.outcome == .review, !isAutoMode {
+            if outcome.event.outcome == .review {
                 if !pendingDecisions.contains(where: { $0.file.id == outcome.decision.file.id }) {
                     pendingDecisions.insert(outcome.decision, at: 0)
                 }
             }
         }
+        if !isDemoMode { scanMemory.persist() }
     }
 
     func handleDrop(urls: [URL]) {
@@ -152,41 +198,38 @@ extension AppModel {
         Task { await self.handleLive(urls: urls) }
     }
 
-    func approve(_ decision: RoutingDecision) async {
+    // MARK: - Review actions
+
+    /// Approves one proposal, optionally sending the file to another rule.
+    /// Returns `true` when the file was moved.
+    @discardableResult
+    func approve(_ decision: RoutingDecision, as rule: CategoryRule? = nil, batch: UUID? = nil) async -> Bool {
         if isDemoMode {
             pendingDecisions.removeAll { $0.id == decision.id }
             appendEvent(SortEvent(
                 fileName: decision.file.name,
-                category: decision.rule?.name,
+                category: (rule ?? decision.rule)?.name,
                 score: decision.score,
                 outcome: .moved
             ))
-            return
+            return true
         }
-        guard let sorter else { return }
+        guard let sorter else { return false }
         do {
-            let event = try await sorter.commit(decision)
+            let event = try await sorter.approve(decision, as: rule, batch: batch)
             appendEvent(event)
             pendingDecisions.removeAll { $0.id == decision.id }
+            return event.outcome == .moved
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "\(decision.file.name): \(error.localizedDescription)"
+            return false
         }
     }
 
     func reject(_ decision: RoutingDecision) {
         pendingDecisions.removeAll { $0.id == decision.id }
         if !isDemoMode, decision.rule != nil {
-            scanMemory.record(
-                for: decision.file,
-                decision: RoutingDecision(
-                    file: decision.file,
-                    rule: decision.rule,
-                    score: decision.score,
-                    runnerUp: decision.runnerUp,
-                    accepted: false,
-                    ranking: decision.ranking
-                )
-            )
+            scanMemory.record(for: decision.file, decision: decision, dismissed: true)
             scanMemory.persist()
         }
         appendEvent(SortEvent(
@@ -198,26 +241,47 @@ extension AppModel {
         ))
     }
 
-    func approveAll() async {
-        let decisions = pendingDecisions
+    /// Approves every pending proposal as one undoable step.
+    func approveAll(minimumScore: Float = 0) async {
+        let decisions = pendingDecisions.filter { $0.score >= minimumScore }
+        let batch = UUID()
+        var moved = 0
+        var failed = 0
         for decision in decisions {
-            await approve(decision)
+            if await approve(decision, batch: batch) { moved += 1 } else { failed += 1 }
+        }
+        lastBatchMoveCount = moved
+        if failed > 0 {
+            errorMessage = "\(moved) sorted, \(failed) could not be moved. Details are in Activity."
+        } else if moved > 0 {
+            notice = "Sorted \(moved) \(moved == 1 ? "file" : "files"). Undo is one click away."
         }
     }
 
+    /// Undoes the whole most recent batch: one sweep, one "Approve all", or
+    /// one single move.
     func undoLastMove() async {
         guard !isDemoMode else { return }
         do {
-            guard let entry = try await journal.recent(limit: 1).first else { return }
-            if try await journal.undo(entry) {
+            let batch = try await journal.lastBatch()
+            guard !batch.isEmpty else {
+                notice = "Nothing to undo."
+                return
+            }
+            let restored = try await journal.undo(batch: batch)
+            for entry in batch.prefix(restored) {
                 appendEvent(SortEvent(
                     fileName: entry.fileName,
                     category: entry.category,
                     score: entry.score,
                     outcome: .undone
                 ))
+            }
+            if restored == 0 {
+                errorMessage = "These files can no longer be undone. They may have been moved or renamed."
             } else {
-                errorMessage = "This file can no longer be undone. It may have been moved or renamed."
+                notice = "Put \(restored) \(restored == 1 ? "file" : "files") back."
+                await runSweep()
             }
         } catch {
             errorMessage = error.localizedDescription

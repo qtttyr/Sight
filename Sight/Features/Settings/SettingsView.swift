@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.sightTheme) private var theme
     @State private var showPurgeConfirmation = false
+    @State private var showResetConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -16,6 +17,7 @@ struct SettingsView: View {
                 sortingCard
                 appearanceCard
                 modelCard
+                resetCard
                 aboutCard
             }
             .padding(.horizontal, 40)
@@ -23,6 +25,16 @@ struct SettingsView: View {
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
+        .confirmationDialog(
+            "Start over?",
+            isPresented: $showResetConfirmation
+        ) {
+            Button("Forget Everything", role: .destructive) {
+                Task { await model.startOver() }
+            }
+        } message: {
+            Text("Your rules, history and watched folder are removed. Sight returns to the setup flow.")
+        }
         .confirmationDialog(
             "Remove the local model?",
             isPresented: $showPurgeConfirmation
@@ -79,17 +91,17 @@ struct SettingsView: View {
                 }
                 Hairline()
                 row(
-                    "Threshold",
-                    subtitle: "Minimum similarity before a category is considered."
+                    "Auto-sort confidence",
+                    subtitle: "How sure Sight must be before it moves a file on its own. Everything below still gets a proposal in Review, so nothing is left behind."
                 ) {
                     HStack(spacing: 12) {
                         SightSlider(
-                            value: thresholdBinding,
-                            range: 0.15...0.75,
+                            value: confidenceBinding,
+                            range: Double(SightConfig.confidenceRange.lowerBound)...Double(SightConfig.confidenceRange.upperBound),
                             step: 0.01
                         )
                         .frame(width: 180)
-                        Text(String(format: "%.2f", model.config.threshold))
+                        Text(String(format: "%.0f%%", model.config.confidence * 100))
                             .font(SightFont.mono())
                             .foregroundStyle(theme.textSecondary)
                             .frame(width: 36, alignment: .trailing)
@@ -97,8 +109,34 @@ struct SettingsView: View {
                 }
                 Hairline()
                 row(
+                    "Rename unclear files",
+                    subtitle: "Files named like IMG_0059 or scan_0041 get a clear name taken from the file itself. Names that already say something are never changed, and undo restores the original."
+                ) {
+                    SightSegmented(
+                        options: [SightSegment(id: true, label: "ON"), SightSegment(id: false, label: "OFF")],
+                        selection: Binding(
+                            get: { model.config.renameFiles },
+                            set: { model.config.renameFiles = $0; model.saveConfig() }
+                        )
+                    )
+                }
+                Hairline()
+                row(
+                    "Suggest new folders",
+                    subtitle: "When at least five files fit no category but belong together, Sight offers one new folder for them. Never one folder per file."
+                ) {
+                    SightSegmented(
+                        options: [SightSegment(id: true, label: "ON"), SightSegment(id: false, label: "OFF")],
+                        selection: Binding(
+                            get: { model.config.suggestFolders },
+                            set: { model.config.suggestFolders = $0; model.saveConfig() }
+                        )
+                    )
+                }
+                Hairline()
+                row(
                     "Embedding size",
-                    subtitle: "Smaller vectors are faster and use less memory. 256 is the default."
+                    subtitle: "Full size (768) is the most accurate and just as fast. Smaller vectors only help on very constrained Macs."
                 ) {
                     SightSegmented(
                         options: EmbeddingDimension.allCases.map {
@@ -201,8 +239,27 @@ struct SettingsView: View {
         }
     }
 
-    private var aboutCard: some View {
+    /// Wipes the setup: rules, history, remembered decisions and the watched
+    /// folder. The app returns to onboarding and starts over. The downloaded
+    /// model stays — it is a download, not a memory.
+    private var resetCard: some View {
         SightCard {
+            VStack(alignment: .leading, spacing: 0) {
+                cardTitle("START OVER")
+                row(
+                    "Forget everything",
+                    subtitle: "Removes your rules, history and watched folder, then walks you through the setup again. The downloaded model is kept."
+                ) {
+                    Button("Start Over") {
+                        showResetConfirmation = true
+                    }
+                    .buttonStyle(SightButtonStyle(kind: .ghost))
+                }
+            }
+        }
+    }
+
+    private var aboutCard: some View {        SightCard {
             VStack(alignment: .leading, spacing: 14) {
                 cardTitle("ABOUT")
                 HStack {
@@ -283,11 +340,11 @@ struct SettingsView: View {
         )
     }
 
-    private var thresholdBinding: Binding<Double> {
+    private var confidenceBinding: Binding<Double> {
         Binding(
-            get: { Double(model.config.threshold) },
+            get: { Double(model.config.confidence) },
             set: {
-                model.config.threshold = Float($0)
+                model.config.confidence = Float($0)
                 model.saveConfig()
             }
         )

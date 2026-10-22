@@ -21,15 +21,27 @@ extension AppModel {
                 loadAudio: config.loadAudio
             )
             try await provider.prepare()
-            let sorter = Sorter(provider: provider, journal: journal)
+            let sorter = Sorter(provider: provider, journal: journal, examples: examples)
             try await sorter.prepare(rules: rules)
 
             self.provider = provider
             self.sorter = sorter
             self.modelState = .ready
             self.modelDiskUsage = await modelStore.diskUsage()
+
+            // Bring an existing setup up to the curated library before the
+            // rules are embedded, so old prompts never survive a launch.
+            if upgradeRulesToLibrary() {
+                try? await sorter.prepare(rules: self.rules)
+            }
+
             await refreshFingerprints()
             startMonitoring()
+            #if DEBUG
+            if Evaluation.isEnabled {
+                await Evaluation.run(model: self)
+            }
+            #endif
         } catch {
             self.modelState = .failed(error.localizedDescription)
         }

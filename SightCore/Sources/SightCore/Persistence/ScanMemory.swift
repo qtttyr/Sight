@@ -1,5 +1,11 @@
 import Foundation
 
+public struct ScanMemoryAlternative: Codable, Sendable, Equatable {
+    public var ruleID: UUID
+    public var name: String
+    public var score: Float
+}
+
 /// One remembered classification outcome for a single file at the watched root.
 public struct ScanMemoryEntry: Codable, Sendable, Equatable {
     public var fileName: String
@@ -11,6 +17,12 @@ public struct ScanMemoryEntry: Codable, Sendable, Equatable {
     public var score: Float
     public var accepted: Bool
     public var recordedAt: Date
+    public var runnerUp: Float?
+    public var reason: String?
+    public var alternatives: [ScanMemoryAlternative]?
+    /// The user chose "keep in place" for this exact file version.
+    public var dismissed: Bool?
+    public var suggestedName: String?
 
     public init(
         fileName: String,
@@ -21,8 +33,18 @@ public struct ScanMemoryEntry: Codable, Sendable, Equatable {
         ruleName: String?,
         score: Float,
         accepted: Bool,
-        recordedAt: Date
+        recordedAt: Date,
+        runnerUp: Float? = nil,
+        reason: String? = nil,
+        alternatives: [ScanMemoryAlternative]? = nil,
+        dismissed: Bool? = nil,
+        suggestedName: String? = nil
     ) {
+        self.suggestedName = suggestedName
+        self.runnerUp = runnerUp
+        self.reason = reason
+        self.alternatives = alternatives
+        self.dismissed = dismissed
         self.fileName = fileName
         self.filePath = filePath
         self.modifiedAt = modifiedAt
@@ -82,7 +104,11 @@ public final class ScanMemory: @unchecked Sendable {
         return entry
     }
 
-    public func record(for fileSnapshot: FileSnapshot, decision: RoutingDecision) {
+    public func record(
+        for fileSnapshot: FileSnapshot,
+        decision: RoutingDecision,
+        dismissed: Bool = false
+    ) {
         lock.lock()
         defer { lock.unlock() }
         file.entries[fileSnapshot.id] = ScanMemoryEntry(
@@ -94,17 +120,16 @@ public final class ScanMemory: @unchecked Sendable {
             ruleName: decision.rule?.name,
             score: decision.score,
             accepted: decision.accepted,
-            recordedAt: .now
+            recordedAt: .now,
+            runnerUp: decision.runnerUp,
+            reason: decision.reason,
+            alternatives: decision.ranking.prefix(4).map {
+                ScanMemoryAlternative(ruleID: $0.ruleID, name: $0.name, score: $0.score)
+            },
+            dismissed: dismissed ? true : nil,
+            suggestedName: decision.suggestedName
         )
         isDirty = true
-    }
-
-    /// Entries that confidently awaited a review the user never answered.
-    /// They are republished into the review queue on the next sweep.
-    public var awaitingReview: [ScanMemoryEntry] {
-        lock.lock()
-        defer { lock.unlock() }
-        return file.entries.values.filter { $0.accepted }.sorted { $0.score > $1.score }
     }
 
     /// How many entries are remembered right now.
@@ -133,6 +158,15 @@ public final class ScanMemory: @unchecked Sendable {
         guard isDirty else { return }
         isDirty = false
         ScanMemory.write(file: file, to: url)
+    }
+
+    /// Forgets every remembered decision.
+    public func reset() {
+        lock.lock()
+        defer { lock.unlock() }
+        file.entries = [:]
+        isDirty = true
+        persist()
     }
 
     // MARK: - Disk

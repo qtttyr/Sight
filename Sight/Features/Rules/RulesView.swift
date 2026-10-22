@@ -15,6 +15,11 @@ struct RulesView: View {
                     subtitle: "\(model.rules.count) categories"
                 )
                 Spacer()
+                Button("Restore Library") {
+                    model.restoreCuratedLibrary()
+                }
+                .buttonStyle(SightButtonStyle(kind: .ghost))
+                .help("Replace the built-in categories with the curated, tuned versions.")
                 Button("New Rule") {
                     model.activeSheet = .ruleEditor
                 }

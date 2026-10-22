@@ -29,6 +29,23 @@ struct RootView: View {
         } message: {
             Text(model.errorMessage ?? "")
         }
+        .overlay(alignment: .bottom) {
+            if let notice = model.notice {
+                Text(notice)
+                    .font(SightFont.body())
+                    .foregroundStyle(theme.buttonLabel)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(theme.buttonFill))
+                    .padding(.bottom, 28)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: notice) {
+                        try? await Task.sleep(for: .seconds(4))
+                        withAnimation(SightMotion.quick) { model.notice = nil }
+                    }
+            }
+        }
+        .animation(SightMotion.quick, value: model.notice)
         .task {
             await model.bootstrap()
         }

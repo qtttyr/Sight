@@ -6,6 +6,10 @@ struct ReviewView: View {
     @Environment(\.sightTheme) private var theme
     @Environment(\.dismiss) private var dismiss
 
+    private var confidentCount: Int {
+        model.pendingDecisions.filter(\.accepted).count
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
@@ -17,6 +21,11 @@ struct ReviewView: View {
                     Text("\(model.pendingDecisions.count) files")
                         .font(SightFont.title())
                         .foregroundStyle(theme.textPrimary)
+                    if !model.pendingDecisions.isEmpty {
+                        Text(subtitle)
+                            .font(SightFont.micro())
+                            .foregroundStyle(theme.textFaint)
+                    }
                 }
                 Spacer()
                 SightIconButton(systemName: "xmark", help: "Close") {
@@ -53,10 +62,19 @@ struct ReviewView: View {
 
                 Spacer()
 
+                if confidentCount > 0, confidentCount < model.pendingDecisions.count {
+                    Button("Approve \(confidentCount) sure") {
+                        Task {
+                            await model.approveAll(minimumScore: model.config.confidence)
+                        }
+                    }
+                    .buttonStyle(SightButtonStyle(kind: .ghost))
+                }
+
                 Button("Approve All") {
                     Task {
                         await model.approveAll()
-                        dismiss()
+                        if model.pendingDecisions.isEmpty { dismiss() }
                     }
                 }
                 .buttonStyle(SightButtonStyle(kind: .primary))
@@ -65,9 +83,15 @@ struct ReviewView: View {
             .padding(.top, 18)
         }
         .padding(32)
-        .frame(width: 720, height: 560)
+        .frame(width: 760, height: 580)
         .background(theme.ink)
         .presentationBackground(theme.ink)
+    }
+
+    private var subtitle: String {
+        let doubtful = model.pendingDecisions.count - confidentCount
+        if doubtful == 0 { return "Everything is a confident match. One click sorts it all." }
+        return "\(confidentCount) confident, \(doubtful) worth a quick look. Change a category with the menu."
     }
 }
 
@@ -90,21 +114,32 @@ private struct ReviewRow: View {
                     .foregroundStyle(theme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(decision.rule?.name ?? "Unrecognized")
+                if let renamed = decision.suggestedName {
+                    Text("→ \(renamed)")
+                        .font(SightFont.micro())
+                        .foregroundStyle(theme.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Text(decision.reason ?? "")
                     .font(SightFont.micro())
-                    .foregroundStyle(theme.textTertiary)
+                    .foregroundStyle(theme.textFaint)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             Spacer()
 
-            ConfidenceBar(score: decision.score)
-                .frame(width: 80)
-            Text("\(Int(decision.score * 100))%")
-                .font(SightFont.micro())
-                .foregroundStyle(theme.textTertiary)
-                .frame(width: 32, alignment: .trailing)
+            categoryMenu
 
-            SightIconButton(systemName: "checkmark", help: "Approve") {
+            ConfidenceBar(score: decision.score)
+                .frame(width: 56)
+            Text("\(Int((decision.score * 100).rounded()))%")
+                .font(SightFont.micro())
+                .foregroundStyle(decision.accepted ? theme.textSecondary : theme.textTertiary)
+                .frame(width: 34, alignment: .trailing)
+
+            SightIconButton(systemName: "checkmark", help: "Move to \(decision.rule?.name ?? "folder")") {
                 Task { await model.approve(decision) }
             }
             SightIconButton(systemName: "xmark", help: "Keep in place") {
@@ -112,5 +147,30 @@ private struct ReviewRow: View {
             }
         }
         .padding(.vertical, 12)
+    }
+
+    private var categoryMenu: some View {
+        Menu {
+            ForEach(model.rules.filter(\.isValid)) { rule in
+                Button {
+                    Task { await model.approve(decision, as: rule) }
+                } label: {
+                    if rule.id == decision.rule?.id {
+                        Label(rule.name, systemImage: "checkmark")
+                    } else {
+                        Text(rule.name)
+                    }
+                }
+            }
+        } label: {
+            Text(decision.rule?.name ?? "Choose…")
+                .font(SightFont.label())
+                .foregroundStyle(theme.textPrimary)
+                .frame(minWidth: 84, alignment: .trailing)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.visible)
+        .fixedSize()
+        .help("Send to a different category and teach Sight")
     }
 }

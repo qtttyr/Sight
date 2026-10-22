@@ -8,6 +8,9 @@ public struct JournalEntry: Identifiable, Codable, Hashable, Sendable {
     public let destination: URL
     public let category: String
     public let score: Float
+    /// Moves made together (one sweep, one "Approve all") share a batch and
+    /// are undone together.
+    public let batchID: UUID?
 
     public init(
         id: UUID = UUID(),
@@ -16,8 +19,10 @@ public struct JournalEntry: Identifiable, Codable, Hashable, Sendable {
         source: URL,
         destination: URL,
         category: String,
-        score: Float
+        score: Float,
+        batchID: UUID? = nil
     ) {
+        self.batchID = batchID
         self.id = id
         self.date = date
         self.fileName = fileName
@@ -60,6 +65,29 @@ public actor Journal {
         return Array(entries.suffix(limit).reversed())
     }
 
+    /// The moves of the most recent batch that can still be undone, newest
+    /// first. Moves recorded without a batch count as a batch of their own.
+    public func lastBatch() throws -> [JournalEntry] {
+        let fileManager = FileManager.default
+        let all = try recent(limit: 2_000)
+        guard let newest = all.first(where: { fileManager.fileExists(atPath: $0.destination.path) })
+        else { return [] }
+        guard let batchID = newest.batchID else { return [newest] }
+        return all.filter {
+            $0.batchID == batchID && fileManager.fileExists(atPath: $0.destination.path)
+        }
+    }
+
+    /// Undoes every entry, newest first. Returns how many were restored.
+    @discardableResult
+    public func undo(batch entries: [JournalEntry]) throws -> Int {
+        var restored = 0
+        for entry in entries {
+            if try undo(entry) { restored += 1 }
+        }
+        return restored
+    }
+
     @discardableResult
     public func undo(_ entry: JournalEntry) throws -> Bool {
         let fileManager = FileManager.default
@@ -78,6 +106,7 @@ public actor Journal {
             try FileManager.default.removeItem(at: url)
         }
     }
+
 
     private func ensureFileExists() throws {
         let directory = url.deletingLastPathComponent()

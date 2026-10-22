@@ -27,7 +27,12 @@ public actor SortExecutor {
 
     public init() {}
 
-    public func move(_ file: FileSnapshot, to destinationDirectory: URL, root: URL) throws -> URL {
+    public func move(
+        _ file: FileSnapshot,
+        to destinationDirectory: URL,
+        root: URL,
+        newName: String? = nil
+    ) throws -> URL {
         guard file.isRegularFile, !file.isDirectory, !file.isSymbolicLink else {
             throw SortError.notAFile
         }
@@ -48,7 +53,8 @@ public actor SortExecutor {
         }
 
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
-        let target = collisionResolver.availableURL(for: file.name, in: destination)
+        let finalName = Self.safeName(newName, fallback: file.name)
+        let target = collisionResolver.availableURL(for: finalName, in: destination)
 
         var coordinationError: NSError?
         var moveError: Error?
@@ -80,6 +86,14 @@ public actor SortExecutor {
             throw SortError.moveFailed(moveError.localizedDescription)
         }
         return target
+    }
+
+    /// A proposed name is trusted only if it is a plain file name.
+    static func safeName(_ proposed: String?, fallback: String) -> String {
+        guard let proposed, !proposed.isEmpty, !proposed.contains("/"), !proposed.contains(":"),
+              !proposed.hasPrefix(".")
+        else { return fallback }
+        return proposed
     }
 
     public func restore(_ entry: JournalEntry) throws {

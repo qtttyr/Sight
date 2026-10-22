@@ -23,8 +23,6 @@ enum DemoMode {
             rootPath: root.path,
             mode: .review,
             dimension: .compact,
-            threshold: 0.35,
-            margin: 0.035,
             theme: .dark,
             loadVision: true,
             loadAudio: false,

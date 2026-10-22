@@ -34,6 +34,14 @@ struct LiveSorterView: View {
                 Spacer(minLength: 20)
             }
             metrics
+            if !model.folderSuggestions.isEmpty {
+                Spacer(minLength: 18)
+                VStack(spacing: 10) {
+                    ForEach(model.folderSuggestions) { suggestion in
+                        FolderSuggestionCard(suggestion: suggestion)
+                    }
+                }
+            }
             Spacer(minLength: 24)
             activity
             Spacer(minLength: 16)
@@ -76,7 +84,7 @@ struct LiveSorterView: View {
                 .buttonStyle(SightButtonStyle(kind: .primary))
                 .disabled(!model.modelState.isReady || model.rootURL == nil || model.isSweeping)
 
-                SightIconButton(systemName: "arrow.uturn.backward", help: "Undo last move") {
+                SightIconButton(systemName: "arrow.uturn.backward", help: "Undo the last sort (the whole batch)") {
                     Task { await model.undoLastMove() }
                 }
             }
@@ -160,7 +168,7 @@ struct LiveSorterView: View {
                 }
             } else if let summary = model.lastSummary, !model.isSweeping {
                 HStack(spacing: 8) {
-                    Text(pointer)
+                    Text(pointer(for: summary))
                         .font(SightFont.micro())
                         .foregroundStyle(theme.textFaint)
                     Spacer()
@@ -181,15 +189,18 @@ struct LiveSorterView: View {
         }
     }
 
-    private var pointer: String {
-        guard let summary = model.lastSummary else { return "" }
+    private func pointer(for summary: SortSummary) -> String {
         var parts: [String] = []
-        if summary.skipped > 0 { parts.append("\(summary.skipped) already handled, from memory") }
-        if !summary.events.isEmpty {
-            parts.append("\(summary.events.count) freshly analyzed")
-        } else if summary.skipped > 0 {
-            parts.append("nothing changed since the last sweep")
+        if summary.moved > 0 { parts.append("\(summary.moved) sorted") }
+        if summary.review > 0 { parts.append("\(summary.review) waiting for your OK") }
+        if summary.failed > 0 { parts.append("\(summary.failed) failed") }
+        if summary.moved == 0, summary.review == 0, summary.failed == 0 {
+            parts.append("nothing to sort")
         }
+        if summary.skipped > 0 { parts.append("\(summary.skipped) from memory") }
+        let seconds = Double(summary.duration.components.seconds)
+            + Double(summary.duration.components.attoseconds) / 1e18
+        parts.append(String(format: "%.1fs", seconds))
         return parts.joined(separator: " · ")
     }
 
@@ -299,5 +310,50 @@ private struct RootOverview: View {
                 .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 5]))
                 .foregroundStyle(theme.line)
         }
+    }
+}
+
+/// "7 files fit no folder but belong together — create one?"
+private struct FolderSuggestionCard: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.sightTheme) private var theme
+    let suggestion: FolderSuggestion
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "folder.badge.plus")
+                .font(.system(size: 15))
+                .foregroundStyle(theme.textSecondary)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("New folder: \(suggestion.name)")
+                    .font(SightFont.headline())
+                    .foregroundStyle(theme.textPrimary)
+                Text("\(suggestion.count) files fit no category but clearly belong together — \(examples)")
+                    .font(SightFont.body())
+                    .foregroundStyle(theme.textFaint)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            Spacer()
+
+            Button("Not now") { model.dismissSuggestion(suggestion) }
+                .buttonStyle(SightButtonStyle(kind: .ghost))
+            Button("Create & sort") {
+                Task { await model.acceptSuggestion(suggestion) }
+            }
+            .buttonStyle(SightButtonStyle(kind: .primary))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .overlay {
+            RoundedRectangle(cornerRadius: SightRadius.card)
+                .strokeBorder(theme.lineStrong, lineWidth: 1)
+        }
+    }
+
+    private var examples: String {
+        suggestion.decisions.prefix(3).map { $0.suggestedName ?? $0.file.name }.joined(separator: ", ")
     }
 }

@@ -49,6 +49,11 @@ final class AppModel {
     var sortProgress: SortProgress?
     var lastSummary: SortSummary?
     var errorMessage: String?
+    /// A short, positive confirmation ("Sorted 12 files"). Shown briefly.
+    var notice: String?
+    var lastBatchMoveCount = 0
+    /// Groups of files that fit no rule but clearly belong together.
+    var folderSuggestions: [FolderSuggestion] = []
     var rootURL: URL?
     var ruleFingerprints: [UUID: [Float]] = [:]
     var modelDiskUsage: Int64 = 0
@@ -63,6 +68,7 @@ final class AppModel {
     @ObservationIgnored let modelStore = ModelStore()
     @ObservationIgnored let journal = Journal(url: AppPaths.journalURL)
     @ObservationIgnored lazy var scanMemory = ScanMemory()
+    @ObservationIgnored lazy var examples = ExampleStore()
 
     @ObservationIgnored var provider: CoreAIEmbeddingProvider?
     @ObservationIgnored var sorter: Sorter?

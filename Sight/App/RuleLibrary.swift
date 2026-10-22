@@ -1,17 +1,28 @@
 import Foundation
 import SightCore
 
-/// The curated rule library. Each template carries a tuned prompt — a rich,
-/// natural-language description of everything that belongs in the folder —
-/// plus a per-rule confidence threshold tuned empirically for that kind of
-/// content. Distinctive types (video, audio, archives) sit well above their
-/// threshold, so they accept aggressively; fuzzy types (Work, Documents) run
-/// more conservatively.
+/// The curated rule library.
+///
+/// Two things make a rule work in practice:
+///
+/// 1. **Separate, concrete ideas.** Sight splits a prompt at every comma and
+///    embeds each idea on its own, then asks "which of this rule's ideas does
+///    the file match best?". Short natural descriptions of *what the content
+///    is* ("invoice or receipt for a purchase") separate far better than
+///    single keywords or one long run-on sentence.
+/// 2. **A per-rule bar.** Broad categories (work) need to be surer than
+///    distinctive ones before Sight moves a file on its own.
+///
+/// File types, name conventions and image metadata are handled by
+/// `TypeAnalyzer` and attach to these rules through their id, so renaming a
+/// rule or changing its folder never breaks the deterministic part.
 struct RuleTemplate: Identifiable, Hashable {
     let id: String
     let name: String
     let prompt: String
-    let threshold: Float
+    /// Minimum probability before Sight may move a file with this rule on its
+    /// own. `nil` follows the global setting.
+    let confidence: Float?
     /// One-line explanation shown in the library, so the user knows what a
     /// rule is going to catch before enabling it.
     let catches: String
@@ -21,18 +32,24 @@ struct RuleTemplate: Identifiable, Hashable {
             name: name,
             prompt: prompt,
             destination: root.appendingPathComponent(name, isDirectory: true),
-            threshold: threshold
+            threshold: confidence,
+            libraryID: id
         )
     }
 }
 
 enum RuleLibrary {
     /// Starter set installed when a root is chosen for the first time.
-    /// Covers the practical floor of a real Downloads folder: document
-    /// formats, media, archives, code — by structure, not hope.
     static let starterRules: [RuleTemplate] = [
-        work, documents, design, photos, video, audio, archives, code, junk
+        work, documents, design, screenshots, photos, video, audio, archives, code, junk
     ]
+
+    /// Everything the library offers.
+    static var all: [RuleTemplate] { starterRules }
+
+    static func template(named name: String) -> RuleTemplate? {
+        all.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    }
 
     // MARK: - Semantic categories
 
@@ -40,13 +57,14 @@ enum RuleLibrary {
         id: "work",
         name: "Work",
         prompt: """
-        Work and business documents: contracts, agreements, NDAs, invoices, bills,
-        receipts, quotations, purchase orders, bank statements, tax forms, spreadsheets
-        and budgets, resumes, CVs, cover letters, job applications, business
-        correspondence, project briefs, task lists for the office, meeting agendas,
-        company reports, presentations and slide decks for work
+        invoice or receipt for a purchase, signed contract or agreement, \
+        non-disclosure agreement, bank statement or tax return, \
+        payroll slip or salary statement, business proposal or price quotation, \
+        resume or CV, cover letter or job application, \
+        business meeting minutes or project brief, company report or business presentation, \
+        budget or financial spreadsheet, purchase order or shipping document
         """,
-        threshold: 0.33,
+        confidence: nil,
         catches: "Contracts, invoices, resumes, decks — the office paper trail."
     )
 
@@ -54,40 +72,52 @@ enum RuleLibrary {
         id: "documents",
         name: "Documents",
         prompt: """
-        Everyday documents and study materials: lecture files, textbooks, manuals,
-        guides, documentation exports, course materials, homework and assignments,
-        printable forms, government paperwork, application forms, personal letters,
-        essays, theses, article drafts, research papers, general pdf documents that
-        are not work-related
+        lecture notes or study material, student worksheet or homework assignment, \
+        essay or article draft, textbook chapter or course reading, \
+        user manual or how-to guide, personal letter or diary entry, \
+        official form or application, academic paper or thesis, \
+        news article or story text, class timetable or schedule
         """,
-        threshold: 0.33,
-        catches: "Study material, manuals, forms, general PDFs and paperwork."
+        confidence: nil,
+        catches: "Study material, notes, essays, manuals, general paperwork."
     )
 
     static let design = RuleTemplate(
         id: "design",
         name: "Design",
         prompt: """
-        Design and creative assets: UI mockups, app screenshots, interface designs,
-        wireframes, prototypes, logos, icons, brand kits, style guides, banners and
-        marketing visuals, illustrations, posters, digital art, figma and sketch
-        exports, photoshop and illustrator files, typefaces and fonts, palette and
-        color references
+        logo or icon design, user interface mockup or wireframe, \
+        illustration or digital artwork, poster or banner or flyer, \
+        brand guidelines or brand kit, font or typeface file, \
+        vector graphic, 3D model or render, pixel art or sprite sheet, \
+        color palette or moodboard, texture or background pattern
         """,
-        threshold: 0.32,
-        catches: "Mockups, screenshots, logos, art, fonts, visual references."
+        confidence: nil,
+        catches: "Mockups, logos, icons, fonts, brand and art references."
+    )
+
+    static let screenshots = RuleTemplate(
+        id: "screenshots",
+        name: "Screenshots",
+        prompt: """
+        screenshot of a phone app, screenshot of a website or browser window, \
+        screen capture of a computer desktop, screenshot of a chat conversation, \
+        screenshot of an error message, captured user interface
+        """,
+        confidence: nil,
+        catches: "Screen captures — anything macOS or iOS captured from a screen."
     )
 
     static let photos = RuleTemplate(
         id: "photos",
         name: "Photos",
         prompt: """
-        Personal photos and camera images: photos taken on a phone or camera,
-        portraits and selfies, pictures of people, pets, landscapes and travel,
-        photo set exports, wallpapers and backgrounds, memes and funny pictures,
-        event photography, snapshots of everyday moments
+        personal photo of people, photo of a landscape or travel destination, \
+        picture of a pet or animal, selfie or portrait, family photo, \
+        photo of food, camera picture, meme or funny image, \
+        wallpaper or background picture, animated gif reaction
         """,
-        threshold: 0.30,
+        confidence: nil,
         catches: "Camera shots, wallpapers, memes, personal pictures."
     )
 
@@ -95,12 +125,10 @@ enum RuleLibrary {
         id: "video",
         name: "Video",
         prompt: """
-        Video files: movies, films, tv episodes, screen recordings and screencasts,
-        tutorials and how-to videos, game clips and replays, animations, video
-        exports from editors, mp4 mkv mov webm clips, footage filmed for social
-        media, video recordings of presentations
+        video clip or movie, tv series episode, screen recording, \
+        tutorial video, camera footage, animation, short video
         """,
-        threshold: 0.28,
+        confidence: nil,
         catches: "Movies, screen recordings, clips, exported footage."
     )
 
@@ -108,59 +136,45 @@ enum RuleLibrary {
         id: "audio",
         name: "Audio",
         prompt: """
-        Audio files: music tracks and albums, songs, mp3 and wav files, voice memos
-        and recordings, meeting recordings, podcasts and podcast episodes,
-        audiobooks, sound effects and samples, jingles, mixing stems, audio exports
-        from editors
+        music track or song, podcast episode, voice memo or recording, \
+        audiobook, sound effect or sample, music album
         """,
-        threshold: 0.28,
-        catches: "Music, voice memos, podcasts, samples, meeting recordings."
+        confidence: nil,
+        catches: "Music, voice memos, podcasts, samples, recordings."
     )
 
     static let archives = RuleTemplate(
         id: "archives",
         name: "Archives",
         prompt: """
-        Archives and installers: zip archives, tarballs, gz and tgz packages, rar
-        files, dmg disk images, pkg installers, application installers downloaded
-        from the internet, packed libraries and releases, backup archives, anything
-        that needs unpacking or installing after downloading
+        compressed archive or zip file, software installer or disk image, \
+        backup bundle, downloaded software package
         """,
-        threshold: 0.28,
-        catches: "ZIP/tgz/DMG/PKG — stuff that unpacks or installs."
+        confidence: nil,
+        catches: "ZIP/tgz/DMG/PKG — anything that unpacks or installs."
     )
 
     static let code = RuleTemplate(
         id: "code",
         name: "Code",
         prompt: """
-        Code and developer files: source code, scripts, repositories, terminal logs,
-        json yaml toml configuration, sql queries, css and style sheets, swift
-        python javascript typescript go rust sources, docker files, api responses,
-        error traces, build outputs, libraries, command line utilities
+        source code file, script or program, software configuration file, \
+        dataset or JSON data file, terminal log or error output, \
+        developer tooling and build files, machine learning model weights, \
+        project dependency list
         """,
-        threshold: 0.28,
-        catches: "Sources, scripts, configs, logs, dev tooling."
+        confidence: nil,
+        catches: "Sources, scripts, configs, datasets, logs, dev tooling."
     )
 
     static let junk = RuleTemplate(
         id: "junk",
         name: "Junk",
         prompt: """
-        Obvious clutter worth deleting: random temporary downloads, duplicate files,
-        cache copies, one-off test images, broken downloads, leftovers that carry
-        no personal, professional or creative value
+        temporary file, duplicate copy of a file, broken or partial download, \
+        empty or untitled file, leftover cache file
         """,
-        threshold: 0.34,
+        confidence: 0.85,
         catches: "Doubles, temp leftovers, throwaway clutter."
     )
-
-    /// Everything the library offers.
-    static var all: [RuleTemplate] {
-        [work, documents, design, photos, video, audio, archives, code, junk]
-    }
-
-    static func template(named name: String) -> RuleTemplate? {
-        all.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
-    }
 }

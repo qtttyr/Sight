@@ -112,7 +112,7 @@ struct OnboardingView: View {
                     .foregroundStyle(theme.textFaint)
 
                 if model.rules.isEmpty {
-                    Text("Choose a folder and Sight will create four editable rules.")
+                    Text("Choose a folder and Sight will create editable starter rules for the common kinds of files.")
                         .font(SightFont.body())
                         .foregroundStyle(theme.textTertiary)
                 } else {
@@ -269,5 +269,11 @@ struct OnboardingView: View {
         model.config.hasCompletedOnboarding = true
         model.saveConfig()
         model.startMonitoring()
+        // First impression: look at the folder right away and show what
+        // Sight would do. Review mode never moves anything by itself.
+        Task {
+            await model.runSweep()
+            if !model.pendingDecisions.isEmpty { model.activeSheet = .review }
+        }
     }
 }

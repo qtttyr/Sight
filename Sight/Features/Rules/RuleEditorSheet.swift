@@ -71,7 +71,7 @@ struct RuleEditorSheet: View {
                         name: name,
                         prompt: prompt,
                         destination: destination,
-                        threshold: template?.threshold
+                        threshold: template?.confidence
                     )
                     dismiss()
                 }
