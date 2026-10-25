@@ -13,9 +13,9 @@
 > On your Mac. By a model that lives in your home folder.
 > No cloud. No accounts. No telemetry. Apache-2.0.
 
-[![macOS 27+](https://img.shields.io/badge/macOS-27%2B-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/mirasawe/Sight)
+[![macOS 27+](https://img.shields.io/badge/macOS-27%2B-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/qtttyr/Sight)
 [![License](https://img.shields.io/badge/license-Apache--2.0-000000?style=flat-square&labelColor=ffffff&color=000000)](./LICENSE)
-[![Open source](https://img.shields.io/badge/open-source-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/mirasawe/Sight)
+[![Open source](https://img.shields.io/badge/open-source-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/qtttyr/Sight)
 
 ---
 
@@ -103,7 +103,7 @@ See [`docs/DESIGN.md`](./docs/DESIGN.md) and [`docs/ARCHITECTURE.md`](./docs/ARC
 
 ## Credits
 
-Made by **[Miras Kustaibek](https://github.com/mirasawe)**.
+Made by **[Miras Kustaibek](https://miraskustaibek.me)**.
 
 If you search my name, this project should be the first thing you find.
 

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://mirasawe.github.io/Sight";
+const SITE_URL = "https://sightmk.vercel.app";
 const SITE_NAME = "Sight";
 const TITLE = "Sight — Your files, sorted by meaning";
 const DESCRIPTION =
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   description: DESCRIPTION,
   applicationName: SITE_NAME,
-  authors: [{ name: "Miras Kustaibek", url: "https://github.com/mirasawe" }],
+  authors: [{ name: "Miras Kustaibek", url: "https://miraskustaibek.me" }],
   creator: "Miras Kustaibek",
   publisher: "Miras Kustaibek",
   keywords: [
@@ -122,7 +122,7 @@ const jsonLd = {
   author: {
     "@type": "Person",
     name: "Miras Kustaibek",
-    url: "https://github.com/mirasawe",
+    url: "https://miraskustaibek.me",
   },
   creator: {
     "@type": "Person",

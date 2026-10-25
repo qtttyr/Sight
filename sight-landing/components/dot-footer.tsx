@@ -32,11 +32,11 @@ export function DotFooter() {
             </div>
             <div className="flex flex-col gap-2.5">
               <span className="micro text-faint">Project</span>
-              <FootLink href="https://github.com/mirasawe/Sight" external>
+              <FootLink href="https://github.com/qtttyr/Sight" external>
                 Source
               </FootLink>
               <FootLink
-                href="https://github.com/mirasawe/Sight/blob/main/THIRD_PARTY_LICENSES.md"
+                href="https://github.com/qtttyr/Sight/blob/main/THIRD_PARTY_LICENSES.md"
                 external
               >
                 Licenses
@@ -56,7 +56,7 @@ export function DotFooter() {
         <p className="micro mt-10 text-faint">
           Made by{" "}
           <a
-            href="https://github.com/mirasawe"
+            href="https://miraskustaibek.me"
             target="_blank"
             rel="noreferrer"
             className="text-secondary transition-colors hover:text-primary"

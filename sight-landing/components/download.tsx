@@ -7,7 +7,7 @@ import { Reveal } from "./playground";
 // Update this URL when the release asset is published. The download button
 // prompts first, then triggers a direct download — no GitHub tab opens.
 const RELEASE_URL =
-  "https://github.com/mirasawe/Sight/releases/latest/download/Sight.dmg";
+  "https://github.com/qtttyr/Sight/releases/latest/download/Sight.dmg";
 
 /**
  * DOWNLOAD — one button, one question, one file.
@@ -71,7 +71,7 @@ export function DownloadCta() {
             Download for macOS
           </button>
           <a
-            href="https://github.com/mirasawe/Sight"
+            href="https://github.com/qtttyr/Sight"
             target="_blank"
             rel="noreferrer"
             className="flex h-14 items-center gap-3 rounded-full border border-line-strong px-8 text-[16px] text-secondary transition-colors hover:border-primary hover:text-primary"

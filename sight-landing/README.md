@@ -1,6 +1,6 @@
 # Sight — landing
 
-The marketing site for [Sight](https://github.com/mirasawe/Sight), built with
+The marketing site for [Sight](https://github.com/qtttyr/Sight), built with
 Next.js 16, Tailwind 4 and motion. Monochrome by design.
 
 ```bash

@@ -40,7 +40,7 @@ export default async function Image() {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, opacity: 0.5 }}>
           <span>Made by Miras Kustaibek</span>
-          <span>mirasawe.github.io/Sight</span>
+          <span>sightmk.vercel.app</span>
         </div>
       </div>
     ),
