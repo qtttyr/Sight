@@ -82,9 +82,12 @@ export const metadata: Metadata = {
     creator: "@mirasawe",
   },
   icons: {
-    icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/icon.png"],
+    shortcut: ["/favicon.ico"],
   },
   manifest: "/manifest.webmanifest",
   other: {
