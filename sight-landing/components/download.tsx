@@ -1,7 +1,14 @@
 "use client";
 
 import React from "react";
-import { Apple } from "lucide-react";
+import {
+  Apple,
+  ShieldCheck,
+  Settings2,
+  KeyRound,
+  CheckCircle2,
+  Download,
+} from "lucide-react";
 import { Reveal } from "./playground";
 
 // Update this URL when the release asset is published. The download button
@@ -13,6 +20,9 @@ const RELEASE_URL =
  * DOWNLOAD — one button, one question, one file.
  * Clicking "Download" never navigates away: a small confirmation sheet asks
  * for permission, then the installer downloads directly to the user's Mac.
+ *
+ * The sheet also walks through the one-time "open an unsigned app" flow,
+ * so a Mac without a Developer-ID certificate is never a dead end.
  */
 export function DownloadCta() {
   const [open, setOpen] = React.useState(false);
@@ -30,7 +40,6 @@ export function DownloadCta() {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    // lock scroll while the sheet is open
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -91,7 +100,7 @@ export function DownloadCta() {
         </p>
       </Reveal>
 
-      {/* confirmation sheet */}
+      {/* confirmation + first-launch guide */}
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
@@ -107,8 +116,9 @@ export function DownloadCta() {
           />
           <div
             ref={dialogRef}
-            className="relative z-10 w-full max-w-md rounded-2xl border border-line bg-surface-raised p-6 shadow-2xl shadow-black/40"
+            className="relative z-10 w-full max-w-lg rounded-2xl border border-line bg-surface-raised p-6 shadow-2xl shadow-black/40"
           >
+            {/* header */}
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -116,21 +126,78 @@ export function DownloadCta() {
                 alt=""
                 className="size-11 rounded-xl"
               />
-              <div>
+              <div className="min-w-0">
                 <p
                   id="download-dialog-title"
                   className="text-[17px] font-medium text-primary"
                 >
                   Download Sight?
                 </p>
-                <p className="micro text-faint">Sight.dmg · macOS 27+</p>
+                <p className="micro text-faint">
+                  Sight.dmg · ~12 MB · macOS 27+
+                </p>
               </div>
             </div>
+
             <p className="mt-4 text-[14px] leading-relaxed text-secondary">
-              The installer is about 12 MB. On first launch Sight downloads the
+              The installer is ~12 MB. On first launch Sight downloads the
               local model (~932 MB) once — after that, everything happens on
               your Mac. No account, no cloud.
             </p>
+
+            {/* first launch — a tiny, honest timeline */}
+            <div className="mt-6 rounded-xl border border-line bg-paper/40 p-4">
+              <p className="micro mb-3 flex items-center gap-2 text-tertiary">
+                <ShieldCheck className="size-3.5" aria-hidden />
+                First launch — your Mac is just being careful
+              </p>
+              <ol className="relative space-y-3 pl-7">
+                <span
+                  className="absolute left-[11px] top-2 bottom-2 w-px bg-line"
+                  aria-hidden
+                />
+                {[
+                  {
+                    icon: Download,
+                    title: "Install",
+                    body: "Open the .dmg, drag Sight into Applications.",
+                  },
+                  {
+                    icon: Settings2,
+                    title: "Open Anyway",
+                    body: "Open Sight once — macOS blocks it. Go to System Settings → Privacy & Security → “Open Anyway”.",
+                  },
+                  {
+                    icon: KeyRound,
+                    title: "Confirm",
+                    body: "Authenticate, then click Open. Sight is trusted forever after.",
+                  },
+                  {
+                    icon: CheckCircle2,
+                    title: "Done",
+                    body: "Sight opens. You'll never see the warning again.",
+                  },
+                ].map((s, i) => (
+                  <li key={i} className="relative flex gap-3">
+                    <span className="absolute -left-7 top-0.5 grid size-[22px] place-items-center rounded-full border border-line-strong bg-surface-raised">
+                      <s.icon className="size-3 text-primary" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-primary">
+                        {s.title}
+                      </p>
+                      <p className="text-[12px] leading-snug text-secondary">
+                        {s.body}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="micro mt-3 text-faint">
+                Sight is open source — read every line on GitHub.
+              </p>
+            </div>
+
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -142,7 +209,7 @@ export function DownloadCta() {
               <button
                 type="button"
                 onClick={confirm}
-                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-6 text-[14px] font-medium text-paper transition-transform hover:scale-[1.03] active:scale-[0.97]"
+                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-6 text-[14px] font-medium text-paper transition-transform hover:scale-[1.03] active:scale-[0.98]"
               >
                 <Apple className="size-4" aria-hidden />
                 Download
