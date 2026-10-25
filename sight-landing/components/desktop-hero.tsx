@@ -3,6 +3,7 @@
 import React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { HalftoneWordmark } from "./halftone-wordmark";
+import { Apple } from "lucide-react";
 
 /**
  * THE HERO — three moves, zero captions.
@@ -80,12 +81,12 @@ export function DesktopHero() {
           </MaskLine>
         </h1>
 
-        {/* one pill, where a pill belongs */}
+        {/* pills: try it + download */}
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.55, duration: 0.5 }}
-          className="mt-9"
+          className="mt-9 flex flex-col items-start gap-3 sm:flex-row"
         >
           <a
             href="#playground"
@@ -95,6 +96,14 @@ export function DesktopHero() {
             <Sparkle />
             Sort it yourself
           </a>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("sight:download"))}
+            className="flex h-13 w-fit items-center gap-2.5 rounded-full border border-line-strong px-7 py-3.5 text-[15px] font-medium text-secondary transition-colors hover:border-primary hover:text-primary"
+          >
+            <Apple className="size-4" aria-hidden />
+            Download
+          </button>
         </motion.div>
       </div>
 

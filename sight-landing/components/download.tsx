@@ -19,6 +19,12 @@ export function DownloadCta() {
   const dialogRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
+    const onDownload = () => setOpen(true);
+    window.addEventListener("sight:download", onDownload);
+    return () => window.removeEventListener("sight:download", onDownload);
+  }, []);
+
+  React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
