@@ -18,7 +18,7 @@ public enum ImageTextReader {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixels
+            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return [] }
 
@@ -34,11 +34,12 @@ public enum ImageTextReader {
             guard let candidate = observation.topCandidates(1).first else { continue }
             // The status bar and home indicator are never content.
             guard observation.boundingBox.midY < 0.95, observation.boundingBox.midY > 0.04 else { continue }
-            result.append(OCRLine(
-                text: candidate.string.trimmingCharacters(in: .whitespacesAndNewlines),
-                height: Double(observation.boundingBox.height),
-                confidence: candidate.confidence
-            ))
+            result.append(
+                OCRLine(
+                    text: candidate.string.trimmingCharacters(in: .whitespacesAndNewlines),
+                    height: Double(observation.boundingBox.height),
+                    confidence: candidate.confidence
+                ))
         }
         return result.sorted { $0.height > $1.height }
     }

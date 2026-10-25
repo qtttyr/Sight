@@ -104,7 +104,7 @@ enum KeywordNamer {
     private static let stopwords: Set<String> = [
         "the", "and", "for", "with", "this", "that", "from", "your", "have", "will", "are", "was",
         "file", "files", "copy", "final", "new", "untitled", "document", "image", "photo",
-        "это", "для", "как", "что", "или", "его", "при", "над", "под", "без"
+        "это", "для", "как", "что", "или", "его", "при", "над", "под", "без",
     ]
 
     /// A word that appears in most members' names or openings, if any.
@@ -121,7 +121,7 @@ enum KeywordNamer {
             for word in words { frequency[word, default: 0] += 1 }
         }
         guard let best = frequency.max(by: { $0.value < $1.value }),
-              Double(best.value) / Double(texts.count) >= 0.6
+            Double(best.value) / Double(texts.count) >= 0.6
         else { return nil }
         return best.key.prefix(1).uppercased() + best.key.dropFirst()
     }

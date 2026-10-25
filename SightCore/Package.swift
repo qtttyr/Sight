@@ -16,6 +16,6 @@ let package = Package(
             name: "SightCoreTests",
             dependencies: ["SightCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
-        )
+        ),
     ]
 )

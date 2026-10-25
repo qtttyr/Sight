@@ -61,3 +61,34 @@ Later launches are 1–3 seconds.
 - Audio windows are 30 s; longer clips are averaged over windows (`chunk_mean`).
 
 The only supported batch size is 1 — the Neural Engine serializes concurrent calls.
+
+## How long an image takes
+
+Measured on the real model with `-SIGHT_BENCH` (debug builds):
+
+| stage | exact (vendored) | fast (shipped) |
+| --- | --- | --- |
+| decode the file | 0.35 s | included below |
+| resize to the model's size | 1.43 s | — |
+| patchify | 0.16 s | included below |
+| **the model itself** | **0.51 s** | **0.51 s** |
+| total, one 1170×2532 screenshot | 2.44 s | **0.65 s** |
+
+The vendored runtime resizes pictures with a hand-written bicubic filter so its
+vectors match PyTorch pixel for pixel. That filter is exact and, on a
+screenshot, more expensive than the model that looks at the result.
+
+`Sight/App/ImagePreparation.swift` does the same job with ImageIO's
+downscale and Core Graphics, and the model cannot tell the difference: the
+vectors agree to 0.991–0.999 cosine on real screenshots, the same tolerance
+the vendored runtime accepts for JPEG decoding differences. If the fast path
+fails for any reason, the exact one takes over.
+
+Over a folder of 33 real screenshots: **118 s → 31 s (3.8×)**.
+
+To measure it yourself:
+
+```sh
+Sight.app/Contents/MacOS/Sight -SIGHT_BENCH ~/Downloads/Screenshots
+```
+

@@ -6,8 +6,14 @@ struct ReviewView: View {
     @Environment(\.sightTheme) private var theme
     @Environment(\.dismiss) private var dismiss
 
+    /// The proposals that clear the bar *right now*. The count and the action
+    /// have to use the same rule, or the button lies about what it will do.
+    private var confidentDecisions: [RoutingDecision] {
+        model.pendingDecisions.filter { $0.score >= model.config.confidence }
+    }
+
     private var confidentCount: Int {
-        model.pendingDecisions.filter(\.accepted).count
+        confidentDecisions.count
     }
 
     var body: some View {
@@ -24,7 +30,7 @@ struct ReviewView: View {
                     if !model.pendingDecisions.isEmpty {
                         Text(subtitle)
                             .font(SightFont.micro())
-                            .foregroundStyle(theme.textFaint)
+                            .foregroundStyle(theme.textTertiary)
                     }
                 }
                 Spacer()
@@ -59,10 +65,15 @@ struct ReviewView: View {
             HStack(spacing: 12) {
                 Button("Close") { dismiss() }
                     .buttonStyle(SightButtonStyle(kind: .ghost))
+                    .disabled(model.isApproving)
 
                 Spacer()
 
-                if confidentCount > 0, confidentCount < model.pendingDecisions.count {
+                if model.isApproving {
+                    Text("Moving \(model.approvingCount) of \(model.approvingTotal)…")
+                        .font(SightFont.micro())
+                        .foregroundStyle(theme.textTertiary)
+                } else if confidentCount > 0, confidentCount < model.pendingDecisions.count {
                     Button("Approve \(confidentCount) sure") {
                         Task {
                             await model.approveAll(minimumScore: model.config.confidence)
@@ -78,7 +89,7 @@ struct ReviewView: View {
                     }
                 }
                 .buttonStyle(SightButtonStyle(kind: .primary))
-                .disabled(model.pendingDecisions.isEmpty)
+                .disabled(model.pendingDecisions.isEmpty || model.isApproving)
             }
             .padding(.top, 18)
         }

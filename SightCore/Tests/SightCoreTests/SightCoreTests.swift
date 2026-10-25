@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import SightCore
 
 @Suite("Vector math")
@@ -53,7 +54,7 @@ struct ClassificationTests {
                 name: "Photos",
                 prompt: "photo screenshot image",
                 destination: URL(fileURLWithPath: "/tmp/Photos")
-            )
+            ),
         ]
     }
 
@@ -164,13 +165,14 @@ struct ExecutionTests {
         try FileManager.default.moveItem(at: source, to: destination)
 
         let journal = Journal(url: root.appendingPathComponent("journal.jsonl"))
-        try await journal.record(JournalEntry(
-            fileName: "note.txt",
-            source: source,
-            destination: destination,
-            category: "Work",
-            score: 0.82
-        ))
+        try await journal.record(
+            JournalEntry(
+                fileName: "note.txt",
+                source: source,
+                destination: destination,
+                category: "Work",
+                score: 0.82
+            ))
 
         let recent = try await journal.recent(limit: 1)
         #expect(recent.count == 1)
@@ -288,7 +290,7 @@ struct ScanMemoryTests {
         )
         #expect(touched.modifiedAt.timeIntervalSince(file.modifiedAt) < 2)
         let editedFile = try? FileSnapshot(url: file.url)
-        #expect(editedFile == nil) // file does not exist; nothing cached can match
+        #expect(editedFile == nil)  // file does not exist; nothing cached can match
         _ = touched
     }
 }
@@ -327,7 +329,6 @@ struct MockEmbeddingProvider: EmbeddingProviding {
         return [0, 0, 1, 0]
     }
 }
-
 
 @Suite("Type evidence")
 struct TypeAnalyzerTests {
@@ -411,7 +412,8 @@ struct NameAndRuleTests {
 
     @Test("Rule kind comes from the library id or an unambiguous name")
     func kinds() {
-        let library = CategoryRule(name: "Anything", prompt: "x", destination: URL(fileURLWithPath: "/tmp/a"), libraryID: "video")
+        let library = CategoryRule(
+            name: "Anything", prompt: "x", destination: URL(fileURLWithPath: "/tmp/a"), libraryID: "video")
         #expect(library.kind == .video)
         let named = CategoryRule(name: "Музыка", prompt: "x", destination: URL(fileURLWithPath: "/tmp/b"))
         #expect(named.kind == .audio)
@@ -435,14 +437,15 @@ struct BatchTests {
         for name in ["a.txt", "b.txt", "c.txt"] {
             let destination = target.appendingPathComponent(name)
             try Data(name.utf8).write(to: destination)
-            try await journal.record(JournalEntry(
-                fileName: name,
-                source: root.appendingPathComponent(name),
-                destination: destination,
-                category: "Work",
-                score: 0.9,
-                batchID: batch
-            ))
+            try await journal.record(
+                JournalEntry(
+                    fileName: name,
+                    source: root.appendingPathComponent(name),
+                    destination: destination,
+                    category: "Work",
+                    score: 0.9,
+                    batchID: batch
+                ))
         }
 
         let entries = try await journal.lastBatch()
@@ -472,8 +475,10 @@ struct BatchTests {
 
     @Test("A type that rules a category out removes it from the choice")
     func exclusionRouting() async throws {
-        let finance = CategoryRule(name: "Finance", prompt: "invoice receipt", destination: URL(fileURLWithPath: "/tmp/F"))
-        let photos = CategoryRule(name: "Photos", prompt: "photo image", destination: URL(fileURLWithPath: "/tmp/P"), libraryID: "photos")
+        let finance = CategoryRule(
+            name: "Finance", prompt: "invoice receipt", destination: URL(fileURLWithPath: "/tmp/F"))
+        let photos = CategoryRule(
+            name: "Photos", prompt: "photo image", destination: URL(fileURLWithPath: "/tmp/P"), libraryID: "photos")
         let service = ClassificationService(provider: MockEmbeddingProvider())
         try await service.prepare(rules: [finance, photos])
         let file = FileSnapshot(name: "photo of invoice.pdf", url: URL(fileURLWithPath: "/tmp/photo of invoice.pdf"))

@@ -4,6 +4,10 @@ struct SightSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     var step: Double = 0.01
+    /// What the slider controls, e.g. "Auto-sort confidence".
+    var label: String?
+    /// How the value is read out, e.g. "percent".
+    var valueLabel: String = ""
 
     @Environment(\.sightTheme) private var theme
 
@@ -11,6 +15,11 @@ struct SightSlider: View {
         let span = range.upperBound - range.lowerBound
         guard span > 0 else { return 0 }
         return min(1, max(0, (value - range.lowerBound) / span))
+    }
+
+    private var spokenValue: String {
+        guard !valueLabel.isEmpty else { return String(format: "%.2f", value) }
+        return "\(Int((value * 100).rounded())) \(valueLabel)"
     }
 
     var body: some View {
@@ -40,6 +49,20 @@ struct SightSlider: View {
         }
         .frame(height: 20)
         .accessibilityElement()
-        .accessibilityValue("\(value)")
+        .accessibilityLabel(label ?? "Value")
+        .accessibilityValue(spokenValue)
+        // Without this the slider cannot be moved at all with VoiceOver or
+        // from the keyboard.
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment:
+                value = min(range.upperBound, value + step)
+            case .decrement:
+                value = max(range.lowerBound, value - step)
+            @unknown default:
+                break
+            }
+        }
+        .focusable()
     }
 }

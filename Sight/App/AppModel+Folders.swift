@@ -3,7 +3,7 @@ import Foundation
 import SightCore
 
 extension AppModel {
-    func chooseFolder() {
+    func chooseFolder(startingAt directory: URL? = nil) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -11,20 +11,33 @@ extension AppModel {
         panel.allowsMultipleSelection = false
         panel.prompt = "Watch"
         panel.message = "Choose the folder Sight should sort. Subfolders are never entered."
-        panel.directoryURL = rootURL
+        panel.directoryURL = directory ?? rootURL
         if panel.runModal() == .OK, let url = panel.url {
             setRoot(url)
         }
     }
 
     func setRoot(_ url: URL) {
+        // A folder the app cannot read is worse than no folder at all: the
+        // user would watch an empty directory and blame the app for it.
+        let scoped = url.startAccessingSecurityScopedResource()
+        guard Self.canRead(url) else {
+            if scoped { url.stopAccessingSecurityScopedResource() }
+            errorMessage = "Sight cannot read “\(url.lastPathComponent)”. Choose it again and allow access."
+            return
+        }
+
         stopMonitoring()
         securityScopedURL?.stopAccessingSecurityScopedResource()
-        _ = url.startAccessingSecurityScopedResource()
-        securityScopedURL = url
+        securityScopedURL = scoped ? url : nil
+        let previousRoot = rootURL
         rootURL = url
         config.rootPath = url.path
         config.rootBookmark = try? BookmarkStore.makeBookmark(for: url)
+
+        // The folders a rule points at have to follow the watched folder,
+        // otherwise files end up in a directory the app no longer watches.
+        rebasedDestinations(from: previousRoot, to: url)
         saveConfig()
 
         if rules.isEmpty {
@@ -41,10 +54,58 @@ extension AppModel {
         }
     }
 
+    /// Moves the destinations that belonged to the old watched folder into the
+    /// new one. A destination the user pointed somewhere else stays there.
+    private func rebasedDestinations(from oldRoot: URL?, to newRoot: URL) {
+        guard let oldRoot, oldRoot.standardizedFileURL != newRoot.standardizedFileURL else { return }
+        var changed = false
+        for index in rules.indices {
+            let destination = rules[index].destination
+            let parent = destination.deletingLastPathComponent().standardizedFileURL
+            guard parent == oldRoot.standardizedFileURL else { continue }
+            rules[index].destination = newRoot.appendingPathComponent(
+                destination.lastPathComponent,
+                isDirectory: true
+            )
+            changed = true
+        }
+        if changed { saveRules() }
+    }
+
+    /// True when the folder can actually be listed. In the sandbox the answer
+    /// is "no" until the user grants access, and the app has to say so
+    /// instead of pretending it is watching an empty folder.
+    static func canRead(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+            isDirectory.boolValue
+        else { return false }
+        return (try? FileManager.default.contentsOfDirectory(atPath: url.path)) != nil
+    }
+
     func installPresetRules() {
         guard let rootURL else { return }
         rules = Self.presetRules(root: rootURL)
         saveRules()
+    }
+
+    /// Watches the user's Downloads folder.
+    ///
+    /// With the downloads entitlement the folder is already open to the app.
+    /// Without it, the open panel is the way in — the user picks the folder
+    /// and macOS grants access.
+    func useDownloadsFolder() {
+        let downloads = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Downloads", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: downloads.path) else {
+            errorMessage = "There is no Downloads folder yet."
+            return
+        }
+        if Self.canRead(downloads) {
+            setRoot(downloads)
+        } else {
+            chooseFolder(startingAt: downloads)
+        }
     }
 
     // MARK: - Curated library
@@ -78,7 +139,7 @@ extension AppModel {
         "audio file, sound file",
         "archive, compressed archive",
         "source code, code file",
-        "junk, clutter, rubbish, trash, garbage, temporary file"
+        "junk, clutter, rubbish, trash, garbage, temporary file",
     ]
 
     private static func isLegacyPrompt(_ prompt: String) -> Bool {
@@ -97,14 +158,22 @@ extension AppModel {
 
         for index in updated.indices {
             let rule = updated[index]
-            // A rule that came from the library is always refreshed with the
-            // current prompt and bar. A rule the user wrote is only adopted
-            // once, when its prompt is still one of the old built-in ones.
+            // A rule that came from the library is refreshed with the current
+            // prompt and bar — but only while it still carries a prompt Sight
+            // wrote. Once the user edits it, it stays theirs. A rule the user
+            // wrote is only adopted once, when its prompt is still one of the
+            // old built-in ones.
             let template: RuleTemplate?
             if let libraryID = rule.libraryID {
-                template = RuleLibrary.all.first { $0.id == libraryID }
+                let candidate = RuleLibrary.all.first { $0.id == libraryID }
+                let untouched =
+                    candidate.map {
+                        rule.prompt == $0.prompt || Self.isLegacyPrompt(rule.prompt)
+                    } ?? false
+                template = untouched ? candidate : nil
             } else if Self.isLegacyPrompt(rule.prompt),
-                      let byName = RuleLibrary.template(named: rule.name) {
+                let byName = RuleLibrary.template(named: rule.name)
+            {
                 template = byName
             } else {
                 template = nil
@@ -112,7 +181,8 @@ extension AppModel {
             guard let template else { continue }
             if rule.prompt != template.prompt
                 || rule.threshold != template.confidence
-                || rule.libraryID != template.id {
+                || rule.libraryID != template.id
+            {
                 updated[index].prompt = template.prompt
                 updated[index].threshold = template.confidence
                 updated[index].libraryID = template.id
@@ -150,9 +220,10 @@ extension AppModel {
     /// adds the categories that are missing. Custom rules are kept.
     func restoreCuratedLibrary() {
         guard let root = rootURL else { return }
-        var updated = rules.filter { rule in
-            RuleLibrary.template(named: rule.name) == nil
-        }
+        // Legacy built-ins are adopted first, so they are replaced instead of
+        // duplicated. A rule the user wrote keeps its own name and prompt.
+        _ = upgradeRulesToLibrary()
+        var updated = rules.filter { $0.libraryID == nil }
         for template in RuleLibrary.starterRules {
             var rule = template.rule(root: root)
             if template.id == "junk" { rule.isEnabled = false }
@@ -243,10 +314,12 @@ extension AppModel {
     /// A tidy folder name derived from a rule name: "Side project files" →
     /// "Side project files", with path-hostile characters collapsed.
     static func folderName(from ruleName: String) -> String {
-        let cleaned = ruleName
+        let cleaned =
+            ruleName
             .components(separatedBy: CharacterSet(charactersIn: "/\\:"))
             .joined(separator: " ")
-        let collapsed = cleaned
+        let collapsed =
+            cleaned
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")

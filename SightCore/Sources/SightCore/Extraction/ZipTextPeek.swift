@@ -104,9 +104,11 @@ struct ZipTextPeek {
     }
 
     private static func extractRuns(from xml: String, tag: String, limit: Int) -> String {
-        guard let regex = try? NSRegularExpression(
-            pattern: "<\(tag)(?: [^>]*)?>([^<]*)</\(tag)>"
-        ) else { return "" }
+        guard
+            let regex = try? NSRegularExpression(
+                pattern: "<\(tag)(?: [^>]*)?>([^<]*)</\(tag)>"
+            )
+        else { return "" }
         let range = NSRange(xml.startIndex..., in: xml)
         var result = ""
         for match in regex.matches(in: xml, range: range) {

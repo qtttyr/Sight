@@ -92,7 +92,8 @@ struct RuleEditorSheet: View {
     private func updateAutoDestination(_ newName: String) {
         guard !didChooseDestination else { return }
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        destination = trimmed.isEmpty
+        destination =
+            trimmed.isEmpty
             ? nil
             : model.makeDestination(named: AppModel.folderName(from: trimmed))
     }

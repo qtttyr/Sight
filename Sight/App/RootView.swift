@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.sightTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -18,6 +19,8 @@ struct RootView: View {
         .frame(minWidth: 980, minHeight: 640)
         .background(theme.ink)
         .preferredColorScheme(colorScheme)
+        .onAppear { SightMotion.reduceMotion = reduceMotion }
+        .onChange(of: reduceMotion) { _, newValue in SightMotion.reduceMotion = newValue }
         .alert(
             "Something went wrong",
             isPresented: Binding(

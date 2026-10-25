@@ -40,13 +40,14 @@ public enum FileKind: String, CaseIterable, Codable, Sendable {
         "documents": .documents, "docs": .documents, "study": .documents,
         "документы": .documents, "учёба": .documents, "учеба": .documents,
         "work": .work, "business": .work, "office": .work,
-        "работа": .work, "финансы": .work, "finance": .work
+        "работа": .work, "финансы": .work, "finance": .work,
     ]
 
     /// Best guess for a kind from a free-form rule name. Returns `nil` when
     /// the name is ambiguous (two kinds) or unrelated.
     public static func infer(fromRuleName name: String) -> FileKind? {
-        let tokens = name
+        let tokens =
+            name
             .lowercased()
             .split(whereSeparator: { !$0.isLetter })
             .map(String.init)

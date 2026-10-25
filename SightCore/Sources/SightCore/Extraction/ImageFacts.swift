@@ -42,7 +42,7 @@ public struct ImageFacts: Sendable, Equatable {
     public static func read(url: URL) -> ImageFacts? {
         let screenCapture = hasScreenCaptureFlag(url)
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         else {
             return nil
         }
@@ -54,7 +54,8 @@ public struct ImageFacts: Sendable, Equatable {
         let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
         let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any]
 
-        let hasCamera = tiff[kCGImagePropertyTIFFMake] != nil
+        let hasCamera =
+            tiff[kCGImagePropertyTIFFMake] != nil
             || tiff[kCGImagePropertyTIFFModel] != nil
             || exif[kCGImagePropertyExifExposureTime] != nil
             || exif[kCGImagePropertyExifFNumber] != nil

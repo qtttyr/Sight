@@ -41,7 +41,7 @@ struct RuleTemplate: Identifiable, Hashable {
 enum RuleLibrary {
     /// Starter set installed when a root is chosen for the first time.
     static let starterRules: [RuleTemplate] = [
-        work, documents, design, screenshots, photos, video, audio, archives, code, junk
+        work, documents, design, screenshots, photos, video, audio, archives, code, junk,
     ]
 
     /// Everything the library offers.
@@ -57,13 +57,13 @@ enum RuleLibrary {
         id: "work",
         name: "Work",
         prompt: """
-        invoice or receipt for a purchase, signed contract or agreement, \
-        non-disclosure agreement, bank statement or tax return, \
-        payroll slip or salary statement, business proposal or price quotation, \
-        resume or CV, cover letter or job application, \
-        business meeting minutes or project brief, company report or business presentation, \
-        budget or financial spreadsheet, purchase order or shipping document
-        """,
+            invoice or receipt for a purchase, signed contract or agreement, \
+            non-disclosure agreement, bank statement or tax return, \
+            payroll slip or salary statement, business proposal or price quotation, \
+            resume or CV, cover letter or job application, \
+            business meeting minutes or project brief, company report or business presentation, \
+            budget or financial spreadsheet, purchase order or shipping document
+            """,
         confidence: nil,
         catches: "Contracts, invoices, resumes, decks — the office paper trail."
     )
@@ -72,12 +72,12 @@ enum RuleLibrary {
         id: "documents",
         name: "Documents",
         prompt: """
-        lecture notes or study material, student worksheet or homework assignment, \
-        essay or article draft, textbook chapter or course reading, \
-        user manual or how-to guide, personal letter or diary entry, \
-        official form or application, academic paper or thesis, \
-        news article or story text, class timetable or schedule
-        """,
+            lecture notes or study material, student worksheet or homework assignment, \
+            essay or article draft, textbook chapter or course reading, \
+            user manual or how-to guide, personal letter or diary entry, \
+            official form or application, academic paper or thesis, \
+            news article or story text, class timetable or schedule
+            """,
         confidence: nil,
         catches: "Study material, notes, essays, manuals, general paperwork."
     )
@@ -86,12 +86,12 @@ enum RuleLibrary {
         id: "design",
         name: "Design",
         prompt: """
-        logo or icon design, user interface mockup or wireframe, \
-        illustration or digital artwork, poster or banner or flyer, \
-        brand guidelines or brand kit, font or typeface file, \
-        vector graphic, 3D model or render, pixel art or sprite sheet, \
-        color palette or moodboard, texture or background pattern
-        """,
+            logo or icon design, user interface mockup or wireframe, \
+            illustration or digital artwork, poster or banner or flyer, \
+            brand guidelines or brand kit, font or typeface file, \
+            vector graphic, 3D model or render, pixel art or sprite sheet, \
+            color palette or moodboard, texture or background pattern
+            """,
         confidence: nil,
         catches: "Mockups, logos, icons, fonts, brand and art references."
     )
@@ -100,10 +100,10 @@ enum RuleLibrary {
         id: "screenshots",
         name: "Screenshots",
         prompt: """
-        screenshot of a phone app, screenshot of a website or browser window, \
-        screen capture of a computer desktop, screenshot of a chat conversation, \
-        screenshot of an error message, captured user interface
-        """,
+            screenshot of a phone app, screenshot of a website or browser window, \
+            screen capture of a computer desktop, screenshot of a chat conversation, \
+            screenshot of an error message, captured user interface
+            """,
         confidence: nil,
         catches: "Screen captures — anything macOS or iOS captured from a screen."
     )
@@ -112,11 +112,11 @@ enum RuleLibrary {
         id: "photos",
         name: "Photos",
         prompt: """
-        personal photo of people, photo of a landscape or travel destination, \
-        picture of a pet or animal, selfie or portrait, family photo, \
-        photo of food, camera picture, meme or funny image, \
-        wallpaper or background picture, animated gif reaction
-        """,
+            personal photo of people, photo of a landscape or travel destination, \
+            picture of a pet or animal, selfie or portrait, family photo, \
+            photo of food, camera picture, meme or funny image, \
+            wallpaper or background picture, animated gif reaction
+            """,
         confidence: nil,
         catches: "Camera shots, wallpapers, memes, personal pictures."
     )
@@ -125,9 +125,9 @@ enum RuleLibrary {
         id: "video",
         name: "Video",
         prompt: """
-        video clip or movie, tv series episode, screen recording, \
-        tutorial video, camera footage, animation, short video
-        """,
+            video clip or movie, tv series episode, screen recording, \
+            tutorial video, camera footage, animation, short video
+            """,
         confidence: nil,
         catches: "Movies, screen recordings, clips, exported footage."
     )
@@ -136,9 +136,9 @@ enum RuleLibrary {
         id: "audio",
         name: "Audio",
         prompt: """
-        music track or song, podcast episode, voice memo or recording, \
-        audiobook, sound effect or sample, music album
-        """,
+            music track or song, podcast episode, voice memo or recording, \
+            audiobook, sound effect or sample, music album
+            """,
         confidence: nil,
         catches: "Music, voice memos, podcasts, samples, recordings."
     )
@@ -147,9 +147,9 @@ enum RuleLibrary {
         id: "archives",
         name: "Archives",
         prompt: """
-        compressed archive or zip file, software installer or disk image, \
-        backup bundle, downloaded software package
-        """,
+            compressed archive or zip file, software installer or disk image, \
+            backup bundle, downloaded software package
+            """,
         confidence: nil,
         catches: "ZIP/tgz/DMG/PKG — anything that unpacks or installs."
     )
@@ -158,11 +158,11 @@ enum RuleLibrary {
         id: "code",
         name: "Code",
         prompt: """
-        source code file, script or program, software configuration file, \
-        dataset or JSON data file, terminal log or error output, \
-        developer tooling and build files, machine learning model weights, \
-        project dependency list
-        """,
+            source code file, script or program, software configuration file, \
+            dataset or JSON data file, terminal log or error output, \
+            developer tooling and build files, machine learning model weights, \
+            project dependency list
+            """,
         confidence: nil,
         catches: "Sources, scripts, configs, datasets, logs, dev tooling."
     )
@@ -171,9 +171,9 @@ enum RuleLibrary {
         id: "junk",
         name: "Junk",
         prompt: """
-        temporary file, duplicate copy of a file, broken or partial download, \
-        empty or untitled file, leftover cache file
-        """,
+            temporary file, duplicate copy of a file, broken or partial download, \
+            empty or untitled file, leftover cache file
+            """,
         confidence: 0.85,
         catches: "Doubles, temp leftovers, throwaway clutter."
     )

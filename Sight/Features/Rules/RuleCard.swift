@@ -5,6 +5,7 @@ struct RuleCard: View {
     let rule: CategoryRule
     let fingerprint: [Float]
     let onUpdate: (String, String, Bool) -> Void
+    let onToggle: (Bool) -> Void
     let onDelete: () -> Void
 
     @Environment(\.sightTheme) private var theme
@@ -18,11 +19,13 @@ struct RuleCard: View {
         rule: CategoryRule,
         fingerprint: [Float],
         onUpdate: @escaping (String, String, Bool) -> Void,
+        onToggle: @escaping (Bool) -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.rule = rule
         self.fingerprint = fingerprint
         self.onUpdate = onUpdate
+        self.onToggle = onToggle
         self.onDelete = onDelete
         _name = State(initialValue: rule.name)
         _prompt = State(initialValue: rule.prompt)
@@ -42,11 +45,26 @@ struct RuleCard: View {
                     Spacer()
 
                     if isDirty {
+                        Text("Unsaved")
+                            .font(SightFont.micro())
+                            .foregroundStyle(theme.textTertiary)
+                            .accessibilityHidden(true)
+
                         Button("Save") { save() }
                             .buttonStyle(SightButtonStyle(kind: .ghost))
                     }
 
-                    SightSwitch(isOn: $isEnabled)
+                    SightSwitch(
+                        isOn: $isEnabled,
+                        label: rule.name,
+                        help: isEnabled ? "This rule is active." : "This rule is switched off."
+                    )
+                    .onChange(of: isEnabled) { _, newValue in
+                        // A switch is a decision, not a draft: it takes effect
+                        // at once, without waiting for a Save button.
+                        isDirty = false
+                        onToggle(newValue)
+                    }
 
                     SightIconButton(systemName: "trash", help: "Delete rule") {
                         showDeleteConfirmation = true
@@ -66,6 +84,7 @@ struct RuleCard: View {
                         .foregroundStyle(theme.textFaint)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .help(rule.destination.path)
 
                     Spacer()
 
@@ -77,7 +96,6 @@ struct RuleCard: View {
         .opacity(isEnabled ? 1 : 0.5)
         .onChange(of: name) { _, _ in isDirty = true }
         .onChange(of: prompt) { _, _ in isDirty = true }
-        .onChange(of: isEnabled) { _, _ in isDirty = true }
         .onChange(of: rule) { _, newValue in
             guard !isDirty else { return }
             name = newValue.name

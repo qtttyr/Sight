@@ -1,6 +1,7 @@
 import Foundation
 import SightCore
 import Testing
+
 @testable import Sight
 
 @Suite("App model")

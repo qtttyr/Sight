@@ -67,9 +67,10 @@ struct LiveSorterView: View {
                     .foregroundStyle(theme.textPrimary)
                 Text(model.rootDisplayPath)
                     .font(SightFont.mono())
-                    .foregroundStyle(theme.textFaint)
+                    .foregroundStyle(theme.textTertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                statusNote
             }
 
             Spacer()
@@ -77,16 +78,21 @@ struct LiveSorterView: View {
             HStack(spacing: 8) {
                 modeToggle
                 Button {
-                    Task { await model.runSweep() }
+                    Task { await model.runSweepWithFeedback() }
                 } label: {
                     Text("Sweep")
                 }
                 .buttonStyle(SightButtonStyle(kind: .primary))
                 .disabled(!model.modelState.isReady || model.rootURL == nil || model.isSweeping)
+                .help(
+                    model.modelState.isReady
+                        ? "Sort everything in the watched folder."
+                        : "Sight needs the local model first. Open Settings to download it.")
 
                 SightIconButton(systemName: "arrow.uturn.backward", help: "Undo the last sort (the whole batch)") {
                     Task { await model.undoLastMove() }
                 }
+                .disabled(model.events.isEmpty)
             }
             .padding(.top, 6)
         }
@@ -94,43 +100,49 @@ struct LiveSorterView: View {
 
     private var statusTitle: String {
         if model.isSweeping { return "Sorting" }
+        if case .failed = model.modelState { return "Model Error" }
         if model.modelState.isReady, model.rootURL != nil { return "Watching" }
         return "Idle"
     }
 
-    private var modeToggle: some View {
-        HStack(spacing: 2) {
-            modeButton("REVIEW", mode: .review)
-            modeButton("AUTO", mode: .auto)
+    /// Why Sight is not working, in plain words. Without this the user sees a
+    /// disabled button and no explanation at all.
+    @ViewBuilder
+    private var statusNote: some View {
+        if case .failed(let message) = model.modelState {
+            Text(message)
+                .font(SightFont.micro())
+                .foregroundStyle(theme.textTertiary)
+                .lineLimit(2)
+                .help("Open Settings to download the model again.")
+        } else if !model.modelState.isReady {
+            Text("The local model is not ready yet — open Settings to download it.")
+                .font(SightFont.micro())
+                .foregroundStyle(theme.textTertiary)
+                .lineLimit(2)
         }
-        .padding(2)
-        .background(theme.hover)
-        .clipShape(Capsule())
     }
 
-    private func modeButton(_ title: String, mode: SortMode) -> some View {
-        let isActive = model.config.mode == mode
-        return Button {
-            withAnimation(SightMotion.quick) {
-                model.config.mode = mode
-                model.config.autoSortEnabled = mode == .auto
-                model.saveConfig()
-            }
-        } label: {
-            Text(title)
-                .font(SightFont.micro())
-                .tracking(0.08)
-                .foregroundStyle(isActive ? theme.buttonLabel : theme.textTertiary)
-                .padding(.horizontal, 10)
-                .frame(height: 24)
-                .background {
-                    if isActive { Capsule().fill(theme.buttonFill) }
+    private var modeToggle: some View {
+        SightSegmented(
+            options: [
+                SightSegment(id: SortMode.review, label: "REVIEW"),
+                SightSegment(id: SortMode.auto, label: "AUTO"),
+            ],
+            selection: Binding(
+                get: { model.config.mode },
+                set: { mode in
+                    model.config.mode = mode
+                    model.config.autoSortEnabled = mode == .auto
+                    model.saveConfig()
                 }
-        }
-        .buttonStyle(.plain)
-        .help(mode == .review
-            ? "Nothing moves without your approval."
-            : "Confident files are sorted silently.")
+            ),
+            label: "Sorting mode"
+        )
+        .help(
+            model.config.mode == .auto
+                ? "Confident files are sorted silently."
+                : "Nothing moves without your approval.")
     }
 
     private var metrics: some View {
@@ -198,7 +210,8 @@ struct LiveSorterView: View {
             parts.append("nothing to sort")
         }
         if summary.skipped > 0 { parts.append("\(summary.skipped) from memory") }
-        let seconds = Double(summary.duration.components.seconds)
+        let seconds =
+            Double(summary.duration.components.seconds)
             + Double(summary.duration.components.attoseconds) / 1e18
         parts.append(String(format: "%.1fs", seconds))
         return parts.joined(separator: " · ")
@@ -259,11 +272,12 @@ struct LiveSorterView: View {
 
     private static func countTopLevel(at url: URL?) -> Int {
         guard let url else { return 0 }
-        let contents = (try? FileManager.default.contentsOfDirectory(
-            at: url,
-            includingPropertiesForKeys: [.isRegularFileKey, .isHiddenKey],
-            options: []
-        )) ?? []
+        let contents =
+            (try? FileManager.default.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: [.isRegularFileKey, .isHiddenKey],
+                options: []
+            )) ?? []
         let regular = contents.filter { item in
             let values = try? item.resourceValues(forKeys: [.isRegularFileKey, .isHiddenKey])
             return (values?.isRegularFile ?? false) && !(values?.isHidden ?? false)

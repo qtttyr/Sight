@@ -35,6 +35,38 @@ public struct SortSummary: Sendable {
     public let duration: Duration
     /// All moves of this sweep share it, so they undo as one step.
     public let batchID: UUID
+    /// Set when the folder itself could not be read. An empty folder and an
+    /// unreadable folder look the same otherwise, and the difference matters
+    /// a lot to the user.
+    public let scanError: String?
+
+    public init(
+        events: [SortEvent],
+        decisions: [RoutingDecision],
+        proposals: [RoutingDecision],
+        scanned: Int,
+        moved: Int,
+        review: Int,
+        unrecognized: Int,
+        failed: Int,
+        skipped: Int,
+        duration: Duration,
+        batchID: UUID,
+        scanError: String? = nil
+    ) {
+        self.scanError = scanError
+        self.events = events
+        self.decisions = decisions
+        self.proposals = proposals
+        self.scanned = scanned
+        self.moved = moved
+        self.review = review
+        self.unrecognized = unrecognized
+        self.failed = failed
+        self.skipped = skipped
+        self.duration = duration
+        self.batchID = batchID
+    }
 }
 
 public struct SortOutcome: Sendable {
@@ -44,6 +76,43 @@ public struct SortOutcome: Sendable {
     public init(decision: RoutingDecision, event: SortEvent) {
         self.decision = decision
         self.event = event
+    }
+}
+
+/// The result of handling a batch of paths that appeared in the watched
+/// folder.
+public struct ProcessResult: Sendable {
+    public let outcomes: [SortOutcome]
+    /// Files that were still being written. They are handed back so the
+    /// caller can try again in a moment instead of dropping them silently.
+    public let deferred: [URL]
+
+    public init(outcomes: [SortOutcome], deferred: [URL]) {
+        self.outcomes = outcomes
+        self.deferred = deferred
+    }
+}
+
+/// Where the time of a sweep went. Performance work needs numbers.
+public struct SortTimings: Sendable {
+    /// Reading and parsing the files.
+    public var extract: TimeInterval = 0
+    /// The model itself: the text tower and the vision tower.
+    public var textEmbed: TimeInterval = 0
+    public var imageEmbed: TimeInterval = 0
+    /// Comparing against the rules and the learned examples.
+    public var compare: TimeInterval = 0
+    public var learned: TimeInterval = 0
+    /// Finding a better name for a file (OCR included).
+    public var naming: TimeInterval = 0
+    /// Moving the files on disk.
+    public var moving: TimeInterval = 0
+    /// Looking for groups that deserve a new folder.
+    public var discovery: TimeInterval = 0
+    public var files = 0
+
+    public var total: TimeInterval {
+        extract + textEmbed + imageEmbed + compare + learned + naming + moving + discovery
     }
 }
 
@@ -60,6 +129,16 @@ public actor Sorter {
     private let examples: ExampleStore?
     private let namer = FileNamer()
     private var clusterSettings = ClusterSettings()
+
+    /// The vectors of the files this sweep classified. Folder discovery
+    /// needs the very same vectors, and embedding a file twice is the
+    /// second most expensive thing Sight does.
+    private var fileVectors: [String: (vector: [Float], isImage: Bool)] = [:]
+    /// The readable text of those files, for naming a new folder after them.
+    private var cachedText: [String: String] = [:]
+
+    /// Timings of the last sweep, for the profiler.
+    public private(set) var timings = SortTimings()
 
     public init(provider: any EmbeddingProviding, journal: Journal, examples: ExampleStore? = nil) {
         self.provider = provider
@@ -95,7 +174,18 @@ public actor Sorter {
     ) async -> SortSummary {
         let started = ContinuousClock.now
         let batch = UUID()
-        let files = (try? scanner.scan(root: root)) ?? []
+        timings = SortTimings()
+        fileVectors = [:]
+        cachedText = [:]
+        var scanError: String?
+        var files: [FileSnapshot] = []
+        do {
+            files = try scanner.scan(root: root)
+        } catch {
+            // The folder itself could not be read. Saying "nothing to sort"
+            // here would be a lie the user cannot debug.
+            scanError = error.localizedDescription
+        }
         var events: [SortEvent] = []
         var decisions: [RoutingDecision] = []
         var proposals: [RoutingDecision] = []
@@ -108,21 +198,24 @@ public actor Sorter {
         for (index, file) in files.enumerated() {
             guard scanner.isReady(file) else { continue }
             defer {
-                progress(SortProgress(
-                    processed: index + 1,
-                    total: files.count,
-                    currentName: file.name,
-                    moved: moved,
-                    review: review,
-                    unrecognized: unrecognized
-                ))
+                progress(
+                    SortProgress(
+                        processed: index + 1,
+                        total: files.count,
+                        currentName: file.name,
+                        moved: moved,
+                        review: review,
+                        unrecognized: unrecognized
+                    ))
             }
 
             var decision: RoutingDecision
             var dismissed = false
             var fromMemory = false
 
-            if let entry = memory?.cachedEntry(for: file), let remembered = self.decision(for: file, from: entry, rules: rules) {
+            if let entry = memory?.cachedEntry(for: file),
+                let remembered = self.decision(for: file, from: entry, rules: rules)
+            {
                 decision = remembered
                 dismissed = entry.dismissed ?? false
                 fromMemory = true
@@ -162,12 +255,13 @@ public actor Sorter {
                 }
             } catch {
                 failed += 1
-                events.append(SortEvent(
-                    fileName: file.name,
-                    category: decision.rule?.name,
-                    outcome: .failed,
-                    message: error.localizedDescription
-                ))
+                events.append(
+                    SortEvent(
+                        fileName: file.name,
+                        category: decision.rule?.name,
+                        outcome: .failed,
+                        message: error.localizedDescription
+                    ))
             }
         }
 
@@ -183,7 +277,8 @@ public actor Sorter {
             failed: failed,
             skipped: skipped,
             duration: ContinuousClock.now - started,
-            batchID: batch
+            batchID: batch,
+            scanError: scanError
         )
     }
 
@@ -223,19 +318,27 @@ public actor Sorter {
         root: URL,
         rules: [CategoryRule],
         config: SightConfig
-    ) async -> [SortOutcome] {
+    ) async -> ProcessResult {
         var outcomes: [SortOutcome] = []
+        var deferred: [URL] = []
         let batch = UUID()
         for url in urls {
             guard url.deletingLastPathComponent().standardizedFileURL == root.standardizedFileURL else {
                 continue
             }
             guard let file = try? FileSnapshot(url: url),
-                  file.isRegularFile,
-                  !file.isDirectory,
-                  !file.isSymbolicLink,
-                  !file.isTemporary,
-                  scanner.isReady(file) else {
+                file.isRegularFile,
+                !file.isDirectory,
+                !file.isSymbolicLink,
+                !file.isTemporary
+            else {
+                continue
+            }
+            // A file that was just written is not ready yet. Handing it back
+            // is the difference between "sorted a moment later" and "never
+            // sorted at all".
+            guard scanner.isReady(file) else {
+                deferred.append(url)
                 continue
             }
             do {
@@ -243,24 +346,25 @@ public actor Sorter {
                 let event = try await apply(decision: decision, config: config, batch: batch)
                 outcomes.append(SortOutcome(decision: decision, event: event))
             } catch {
-                outcomes.append(SortOutcome(
-                    decision: RoutingDecision(
-                        file: file,
-                        rule: nil,
-                        score: 0,
-                        runnerUp: 0,
-                        accepted: false,
-                        ranking: []
-                    ),
-                    event: SortEvent(
-                        fileName: file.name,
-                        outcome: .failed,
-                        message: error.localizedDescription
-                    )
-                ))
+                outcomes.append(
+                    SortOutcome(
+                        decision: RoutingDecision(
+                            file: file,
+                            rule: nil,
+                            score: 0,
+                            runnerUp: 0,
+                            accepted: false,
+                            ranking: []
+                        ),
+                        event: SortEvent(
+                            fileName: file.name,
+                            outcome: .failed,
+                            message: error.localizedDescription
+                        )
+                    ))
             }
         }
-        return outcomes
+        return ProcessResult(outcomes: outcomes, deferred: deferred)
     }
 
     // MARK: - Classification
@@ -270,15 +374,67 @@ public actor Sorter {
         rules: [CategoryRule],
         config: SightConfig
     ) async throws -> RoutingDecision {
+        let reading = ContinuousClock.now
         let context = extractor.extract(file: file)
+        timings.extract += (ContinuousClock.now - reading).seconds
+        timings.files += 1
+
         let decision = try await classifier.classify(
             context: context,
             rules: rules,
             dimension: config.dimension.rawValue,
             confidence: config.confidence
         )
+        let inside = await classifier.timings
+        timings.textEmbed += inside.textEmbed
+        timings.imageEmbed += inside.imageEmbed
+        timings.compare += inside.compare
+        timings.learned += inside.learned
+
+        // Keep the vectors around: folder discovery compares the leftovers
+        // against each other and would otherwise embed every one of them
+        // for a second time.
+        let vectors = await classifier.lastVectors
+        if let image = vectors.image {
+            fileVectors[file.id] = (image, true)
+        } else if let text = vectors.text {
+            fileVectors[file.id] = (text, false)
+        }
+        cachedText[file.id] = String(context.body.prefix(400))
+
         guard config.renameFiles, decision.rule != nil else { return decision }
-        return decision.with(suggestedName: namer.suggest(for: context))
+        let naming = ContinuousClock.now
+        let name = await suggestedName(for: context)
+        timings.naming += (ContinuousClock.now - naming).seconds
+        return decision.with(suggestedName: name)
+    }
+
+    /// A better name for a file whose current name says nothing.
+    ///
+    /// Candidates come from the file itself — its title metadata, a
+    /// recognised document type, headings in the body or in a screenshot. The
+    /// one that best matches the file's own meaning wins. A candidate that
+    /// only barely wins is dropped: a wrong rename is worse than no rename.
+    private func suggestedName(for context: FileContext) async -> String? {
+        guard namer.isRenameable(context) else { return nil }
+        let (candidates, reference) = namer.candidates(for: context)
+        guard !candidates.isEmpty else { return nil }
+
+        // Templates carry their own authority, so they never need the model.
+        var scores = [Float](repeating: 0, count: candidates.count)
+        if !candidates.contains(where: \.isTemplate), !reference.isEmpty,
+            let raw = try? await provider.embed(text: reference, kind: .classification)
+        {
+            let query = VectorMath.normalize(raw)
+            for (index, candidate) in candidates.enumerated() {
+                guard let vector = try? await provider.embed(text: candidate.text, kind: .classification)
+                else { continue }
+                scores[index] = VectorMath.cosine(query, VectorMath.normalize(vector))
+            }
+        }
+
+        guard let chosen = FileNamer.select(candidates, scores: scores) else { return nil }
+        return namer.finalName(title: chosen.text, for: context.file)
     }
 
     public func classify(
@@ -313,9 +469,11 @@ public actor Sorter {
         rules: [CategoryRule],
         config: SightConfig
     ) async -> [FolderSuggestion] {
+        let started = ContinuousClock.now
+        defer { timings.discovery += (ContinuousClock.now - started).seconds }
         let settings = clusterSettings
         guard config.suggestFolders, rules.count < settings.maximumRules,
-              leftovers.count >= settings.minimumSize
+            leftovers.count >= settings.minimumSize
         else { return [] }
 
         struct Item {
@@ -326,9 +484,20 @@ public actor Sorter {
         }
         var items: [Item] = []
         for decision in leftovers {
-            let context = extractor.extract(file: decision.file)
-            guard let sample = await classifier.exampleVector(for: context) else { continue }
-            let words = NameCleaner.clean(decision.file.name) + " " + String(context.body.prefix(400))
+            // The vector was already computed when the file was classified.
+            // Only files that came from memory still have to be embedded.
+            var sample: (vector: [Float], isImage: Bool)?
+            var body = ""
+            if let cached = fileVectors[decision.file.id] {
+                sample = cached
+                body = cachedText[decision.file.id] ?? ""
+            } else {
+                let context = extractor.extract(file: decision.file)
+                body = String(context.body.prefix(400))
+                sample = await classifier.exampleVector(for: context)
+            }
+            guard let sample else { continue }
+            let words = NameCleaner.clean(decision.file.name) + " " + body
             items.append(Item(decision: decision, vector: sample.vector, isImage: sample.isImage, text: words))
         }
 
@@ -357,33 +526,37 @@ public actor Sorter {
                 var evidence = ""
                 let verdict = await classifier.explain(centroid: rawCentroid, isImage: isImage)
                 if let verdict, verdict.topicSimilarity >= settings.topicFloor,
-                   verdict.runnerUpGap >= settings.topicGap,
-                   verdict.topicSimilarity - verdict.ruleSimilarity >= settings.topicOverRule {
+                    verdict.runnerUpGap >= settings.topicGap,
+                    verdict.topicSimilarity - verdict.ruleSimilarity >= settings.topicOverRule
+                {
                     name = verdict.topic.name(russian: russian)
                     prompt = verdict.topic.prompt
-                    evidence = String(format: "topic %.2f vs rule %.2f", verdict.topicSimilarity, verdict.ruleSimilarity)
+                    evidence = String(
+                        format: "topic %.2f vs rule %.2f", verdict.topicSimilarity, verdict.ruleSimilarity)
                 }
                 // A keyword name is only trusted when the files were already
                 // doubtful about their current home.
                 let doubtful = members.filter { !group[$0].decision.accepted }.count
                 if name == nil, doubtful * 2 >= members.count,
-                   let keyword = KeywordNamer.sharedKeyword(for: texts) {
+                    let keyword = KeywordNamer.sharedKeyword(for: texts)
+                {
                     name = keyword
                     prompt = keyword.lowercased()
                     evidence = "shared keyword"
                 }
                 guard let name, let prompt, !takenNames.contains(name.lowercased()),
-                      !suggestions.contains(where: { $0.name == name })
+                    !suggestions.contains(where: { $0.name == name })
                 else { continue }
 
-                suggestions.append(FolderSuggestion(
-                    id: UUID(),
-                    name: name,
-                    prompt: prompt,
-                    coherence: coherence,
-                    decisions: members.map { group[$0].decision },
-                    evidence: evidence
-                ))
+                suggestions.append(
+                    FolderSuggestion(
+                        id: UUID(),
+                        name: name,
+                        prompt: prompt,
+                        coherence: coherence,
+                        decisions: members.map { group[$0].decision },
+                        evidence: evidence
+                    ))
             }
         }
         return Array(
@@ -444,20 +617,29 @@ public actor Sorter {
         guard let rule = decision.rule else {
             return SortEvent(fileName: decision.file.name, outcome: .unrecognized)
         }
-        let destination = try await executor.move(
-            decision.file,
-            to: rule.destination,
-            root: decision.file.url.deletingLastPathComponent(),
+        let root = decision.file.url.deletingLastPathComponent()
+        // The destination is resolved first so the journal can record the
+        // intent before the file moves. If the app dies in between, the
+        // journal holds an entry for a file that never arrived — harmless.
+        // The other way round, a moved file would have no undo at all.
+        let target = try await executor.destination(
+            for: decision.file,
+            in: rule.destination,
+            root: root,
             newName: decision.suggestedName
         )
-        try await journal.record(JournalEntry(
-            fileName: decision.file.name,
-            source: decision.file.url,
-            destination: destination,
-            category: rule.name,
-            score: decision.score,
-            batchID: batch
-        ))
+        try await journal.record(
+            JournalEntry(
+                fileName: decision.file.name,
+                source: decision.file.url,
+                destination: target,
+                category: rule.name,
+                score: decision.score,
+                batchID: batch
+            ))
+        let moving = ContinuousClock.now
+        _ = try await executor.move(decision.file, to: target, root: root)
+        timings.moving += (ContinuousClock.now - moving).seconds
         return SortEvent(
             fileName: decision.file.name,
             category: rule.name,

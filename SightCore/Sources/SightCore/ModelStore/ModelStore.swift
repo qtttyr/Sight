@@ -58,51 +58,56 @@ public actor ModelStore {
             let existingSize = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? -1
             if Int64(existingSize) == file.size {
                 completedBytes += file.size
-                progress(ModelInstallProgress(
-                    currentFile: file.path,
-                    completedBytes: completedBytes,
-                    currentFileBytes: file.size,
-                    totalBytes: totalBytes,
-                    fileFraction: 1
-                ))
+                progress(
+                    ModelInstallProgress(
+                        currentFile: file.path,
+                        completedBytes: completedBytes,
+                        currentFileBytes: file.size,
+                        totalBytes: totalBytes,
+                        fileFraction: 1
+                    ))
                 continue
             }
 
             let completedBeforeFile = completedBytes
             try await downloader.download(file, to: destination) { update in
-                progress(ModelInstallProgress(
-                    currentFile: file.path,
-                    completedBytes: completedBeforeFile,
-                    currentFileBytes: file.size,
-                    totalBytes: totalBytes,
-                    fileFraction: update.fraction
-                ))
+                progress(
+                    ModelInstallProgress(
+                        currentFile: file.path,
+                        completedBytes: completedBeforeFile,
+                        currentFileBytes: file.size,
+                        totalBytes: totalBytes,
+                        fileFraction: update.fraction
+                    ))
             }
 
             guard try downloader.verify(file: destination, expected: file.sha256) else {
                 throw ModelDownloadError.checksumMismatch(file.path)
             }
             completedBytes += file.size
-            progress(ModelInstallProgress(
-                currentFile: file.path,
-                completedBytes: completedBytes,
-                currentFileBytes: file.size,
-                totalBytes: totalBytes,
-                fileFraction: 1
-            ))
+            progress(
+                ModelInstallProgress(
+                    currentFile: file.path,
+                    completedBytes: completedBytes,
+                    currentFileBytes: file.size,
+                    totalBytes: totalBytes,
+                    fileFraction: 1
+                ))
         }
 
-        try writeRecord(ModelInstallRecord(
-            revision: ModelManifest.revision,
-            assets: Array(assets),
-            installedAt: .now
-        ))
+        try writeRecord(
+            ModelInstallRecord(
+                revision: ModelManifest.revision,
+                assets: Array(assets),
+                installedAt: .now
+            ))
     }
 
     public func importModel(from source: URL) throws {
         try AppPaths.ensureDirectories()
         let fileManager = FileManager.default
-        let sourceModel = source.lastPathComponent == "model"
+        let sourceModel =
+            source.lastPathComponent == "model"
             ? source
             : source.appendingPathComponent("model", isDirectory: true)
         guard fileManager.fileExists(atPath: sourceModel.path) else {
@@ -116,17 +121,22 @@ public actor ModelStore {
         try fileManager.copyItem(at: sourceModel, to: destinationModel)
 
         var assets: Set<ModelAsset> = [.text]
-        if fileManager.fileExists(atPath: destinationModel.appendingPathComponent("embeddinggemma-2-vision.aimodel").path) {
+        if fileManager.fileExists(
+            atPath: destinationModel.appendingPathComponent("embeddinggemma-2-vision.aimodel").path)
+        {
             assets.insert(.vision)
         }
-        if fileManager.fileExists(atPath: destinationModel.appendingPathComponent("embeddinggemma-2-audio.aimodel").path) {
+        if fileManager.fileExists(
+            atPath: destinationModel.appendingPathComponent("embeddinggemma-2-audio.aimodel").path)
+        {
             assets.insert(.audio)
         }
-        try writeRecord(ModelInstallRecord(
-            revision: ModelManifest.revision,
-            assets: Array(assets),
-            installedAt: .now
-        ))
+        try writeRecord(
+            ModelInstallRecord(
+                revision: ModelManifest.revision,
+                assets: Array(assets),
+                installedAt: .now
+            ))
     }
 
     public func remove() throws {
@@ -135,10 +145,12 @@ public actor ModelStore {
     }
 
     public func diskUsage() -> Int64 {
-        guard let enumerator = FileManager.default.enumerator(
-            at: root,
-            includingPropertiesForKeys: [.fileSizeKey]
-        ) else { return 0 }
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.fileSizeKey]
+            )
+        else { return 0 }
         var total: Int64 = 0
         for case let url as URL in enumerator {
             let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0

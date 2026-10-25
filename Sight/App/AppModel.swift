@@ -52,6 +52,11 @@ final class AppModel {
     /// A short, positive confirmation ("Sorted 12 files"). Shown briefly.
     var notice: String?
     var lastBatchMoveCount = 0
+    /// True while a bulk approval is running, so the UI can show progress
+    /// instead of pretending nothing happens.
+    var isApproving = false
+    var approvingCount = 0
+    var approvingTotal = 0
     /// Groups of files that fit no rule but clearly belong together.
     var folderSuggestions: [FolderSuggestion] = []
     var rootURL: URL?
@@ -74,6 +79,14 @@ final class AppModel {
     @ObservationIgnored var sorter: Sorter?
     @ObservationIgnored var monitor: FSEventsMonitor?
     @ObservationIgnored var securityScopedURL: URL?
+
+    /// The provider, for the profiler and the benchmark.
+    var embeddingProvider: CoreAIEmbeddingProvider? { provider }
+
+    /// Files that appeared in the watched folder but were still being written.
+    /// They are retried until they settle.
+    @ObservationIgnored var deferredURLs: [String: URL] = [:]
+    @ObservationIgnored var deferredRetry: Task<Void, Never>?
 
     private var didBootstrap = false
     @ObservationIgnored var isModelLoading = false
@@ -114,10 +127,10 @@ final class AppModel {
         defer { isBootstrapping = false }
 
         #if DEBUG
-        if DemoMode.isEnabled {
-            DemoMode.configure(self)
-            return
-        }
+            if DemoMode.isEnabled {
+                DemoMode.configure(self)
+                return
+            }
         #endif
 
         do {

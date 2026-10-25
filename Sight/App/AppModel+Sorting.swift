@@ -53,6 +53,10 @@ extension AppModel {
         }
 
         lastSummary = summary
+        if let scanError = summary.scanError {
+            // An unreadable folder must not look like an empty one.
+            errorMessage = "Sight could not read the watched folder: \(scanError)"
+        }
         for event in summary.events.reversed() {
             appendEvent(event)
         }
@@ -116,7 +120,9 @@ extension AppModel {
     func acceptSuggestion(_ suggestion: FolderSuggestion) async {
         guard let rootURL else { return }
         let destination = rootURL.appendingPathComponent(Self.folderName(from: suggestion.name), isDirectory: true)
-        guard let rule = addRule(name: suggestion.name, prompt: suggestion.prompt, destination: destination) else { return }
+        guard let rule = addRule(name: suggestion.name, prompt: suggestion.prompt, destination: destination) else {
+            return
+        }
         try? await sorter?.prepare(rules: rules)
         let batch = UUID()
         var moved = 0
@@ -135,7 +141,6 @@ extension AppModel {
         folderSuggestions.removeAll { $0.id == suggestion.id }
     }
 
-
     /// Memory is invalidated by any change to the inputs the classifier sees:
     /// the rules themselves, the confidence bar, and the classifier itself.
     static func classificationSignature(
@@ -147,10 +152,12 @@ extension AppModel {
             "r\(config.renameFiles ? 1 : 0)",
             "c\(String(format: "%.3f", config.confidence))",
             "d\(config.dimension.rawValue)",
-            "v\(config.loadVision ? 1 : 0)"
+            "v\(config.loadVision ? 1 : 0)",
         ]
         for rule in rules {
-            parts.append("\(rule.id.uuidString)|\(rule.name)|\(rule.prompt)|\(rule.destination.path)|\(rule.threshold.map { String($0) } ?? "-")|\(rule.isEnabled ? "1" : "0")")
+            parts.append(
+                "\(rule.id.uuidString)|\(rule.name)|\(rule.prompt)|\(rule.destination.path)|\(rule.threshold.map { String($0) } ?? "-")|\(rule.isEnabled ? "1" : "0")"
+            )
         }
         return parts.joined(separator: "\n")
     }
@@ -159,10 +166,42 @@ extension AppModel {
     /// by an older engine are never served from memory.
     static let engineVersion = 4
 
+    /// Files that appeared in the watched folder but were still being written.
+    /// They are retried until they settle.
+    /// Sweeps, but says why it cannot when something is missing. A button
+    /// that does nothing at all is the worst kind of broken.
+    func runSweepWithFeedback() async {
+        guard modelState.isReady else {
+            errorMessage = "Sight needs the local model before it can sort anything. Open Settings to download it."
+            return
+        }
+        guard rootURL != nil else {
+            errorMessage = "Choose the folder Sight should watch first."
+            return
+        }
+        await runSweep()
+    }
+
     func handleLive(urls: [URL]) async {
-        guard let sorter, let rootURL, !isSweeping, modelState.isReady else { return }
-        let outcomes = await sorter.process(urls: urls, root: rootURL, rules: rules, config: config)
-        for outcome in outcomes {
+        guard !isSweeping, modelState.isReady else { return }
+        for url in urls { deferredURLs[url.standardizedFileURL.path] = url }
+        await drainDeferredURLs()
+    }
+
+    /// Sorts everything that is waiting, and schedules another pass for the
+    /// files that were not ready yet. Without this a file dropped into the
+    /// folder would be seen once, judged "too fresh" and never touched again.
+    private func drainDeferredURLs() async {
+        guard let sorter, let rootURL, !deferredURLs.isEmpty else { return }
+        let result = await sorter.process(
+            urls: Array(deferredURLs.values),
+            root: rootURL,
+            rules: rules,
+            config: config
+        )
+
+        for outcome in result.outcomes {
+            deferredURLs.removeValue(forKey: outcome.decision.file.id)
             appendEvent(outcome.event)
             if !isDemoMode, outcome.event.outcome != .failed {
                 scanMemory.record(for: outcome.decision.file, decision: outcome.decision)
@@ -174,6 +213,20 @@ extension AppModel {
             }
         }
         if !isDemoMode { scanMemory.persist() }
+
+        let stillWaiting = result.deferred
+        for url in stillWaiting { deferredURLs[url.standardizedFileURL.path] = url }
+        guard !stillWaiting.isEmpty else {
+            deferredRetry?.cancel()
+            deferredRetry = nil
+            return
+        }
+        deferredRetry?.cancel()
+        deferredRetry = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(1_200))
+            guard !Task.isCancelled else { return }
+            await self?.drainDeferredURLs()
+        }
     }
 
     func handleDrop(urls: [URL]) {
@@ -206,12 +259,13 @@ extension AppModel {
     func approve(_ decision: RoutingDecision, as rule: CategoryRule? = nil, batch: UUID? = nil) async -> Bool {
         if isDemoMode {
             pendingDecisions.removeAll { $0.id == decision.id }
-            appendEvent(SortEvent(
-                fileName: decision.file.name,
-                category: (rule ?? decision.rule)?.name,
-                score: decision.score,
-                outcome: .moved
-            ))
+            appendEvent(
+                SortEvent(
+                    fileName: decision.file.name,
+                    category: (rule ?? decision.rule)?.name,
+                    score: decision.score,
+                    outcome: .moved
+                ))
             return true
         }
         guard let sorter else { return false }
@@ -232,22 +286,34 @@ extension AppModel {
             scanMemory.record(for: decision.file, decision: decision, dismissed: true)
             scanMemory.persist()
         }
-        appendEvent(SortEvent(
-            fileName: decision.file.name,
-            category: decision.rule?.name,
-            score: decision.score,
-            outcome: .skipped,
-            message: "Kept in place."
-        ))
+        appendEvent(
+            SortEvent(
+                fileName: decision.file.name,
+                category: decision.rule?.name,
+                score: decision.score,
+                outcome: .skipped,
+                message: "Kept in place."
+            ))
     }
 
     /// Approves every pending proposal as one undoable step.
     func approveAll(minimumScore: Float = 0) async {
+        guard !isApproving else { return }
         let decisions = pendingDecisions.filter { $0.score >= minimumScore }
+        guard !decisions.isEmpty else { return }
+        isApproving = true
+        approvingCount = 0
+        approvingTotal = decisions.count
+        defer {
+            isApproving = false
+            approvingCount = 0
+            approvingTotal = 0
+        }
         let batch = UUID()
         var moved = 0
         var failed = 0
         for decision in decisions {
+            approvingCount += 1
             if await approve(decision, batch: batch) { moved += 1 } else { failed += 1 }
         }
         lastBatchMoveCount = moved
@@ -270,18 +336,27 @@ extension AppModel {
             }
             let restored = try await journal.undo(batch: batch)
             for entry in batch.prefix(restored) {
-                appendEvent(SortEvent(
-                    fileName: entry.fileName,
-                    category: entry.category,
-                    score: entry.score,
-                    outcome: .undone
-                ))
+                appendEvent(
+                    SortEvent(
+                        fileName: entry.fileName,
+                        category: entry.category,
+                        score: entry.score,
+                        outcome: .undone
+                    ))
             }
             if restored == 0 {
                 errorMessage = "These files can no longer be undone. They may have been moved or renamed."
             } else {
+                // The files are back in the watched folder. Remember that the
+                // user wanted them there, so the next sweep does not move
+                // them away again — otherwise "undo" would undo itself.
+                let restoredFiles = batch.prefix(restored).compactMap { try? FileSnapshot(url: $0.source) }
+                scanMemory.dismiss(files: restoredFiles)
+                scanMemory.persist()
+                for file in restoredFiles {
+                    pendingDecisions.removeAll { $0.file.id == file.id }
+                }
                 notice = "Put \(restored) \(restored == 1 ? "file" : "files") back."
-                await runSweep()
             }
         } catch {
             errorMessage = error.localizedDescription

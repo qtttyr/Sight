@@ -2,6 +2,11 @@ import SwiftUI
 
 struct SightSwitch: View {
     @Binding var isOn: Bool
+    /// What the switch is about. Without it VoiceOver announces a bare
+    /// "On" with no idea what it belongs to.
+    var label: String?
+    var help: String?
+
     @Environment(\.sightTheme) private var theme
 
     var body: some View {
@@ -19,6 +24,9 @@ struct SightSwitch: View {
                 }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label ?? "Enabled")
         .accessibilityValue(isOn ? "On" : "Off")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(help ?? "")
     }
 }

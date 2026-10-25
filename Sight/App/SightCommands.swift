@@ -14,7 +14,7 @@ struct SightCommands: Commands {
             Divider()
 
             Button("Sweep Now") {
-                Task { await model.runSweep() }
+                Task { await model.runSweepWithFeedback() }
             }
             .keyboardShortcut("r", modifiers: .command)
 
@@ -22,9 +22,37 @@ struct SightCommands: Commands {
                 Task { await model.undoLastMove() }
             }
             .keyboardShortcut("z", modifiers: .command)
+
+            Button("Review Queue") {
+                model.activeSheet = .review
+            }
+            .keyboardShortcut(.return, modifiers: .command)
         }
 
         CommandMenu("Sight") {
+            Button("Live") {
+                model.section = .live
+            }
+            .keyboardShortcut("1", modifiers: .command)
+
+            Button("Rules") {
+                model.section = .rules
+            }
+            .keyboardShortcut("2", modifiers: .command)
+
+            Button("Insights") {
+                model.section = .insights
+            }
+            .keyboardShortcut("3", modifiers: .command)
+
+            Button("New Rule…") {
+                model.section = .rules
+                model.activeSheet = .ruleEditor
+            }
+            .keyboardShortcut("n", modifiers: .command)
+
+            Divider()
+
             Button("Command Palette") {
                 NotificationCenter.default.post(name: .sightShowPalette, object: nil)
             }

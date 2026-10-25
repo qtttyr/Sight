@@ -10,7 +10,7 @@ final class SightUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-ApplePersistenceIgnoreState", "YES",
-            "-NSQuitAlwaysKeepsWindows", "NO"
+            "-NSQuitAlwaysKeepsWindows", "NO",
         ]
         app.launch()
 
@@ -25,7 +25,7 @@ final class SightSecondRunTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-ApplePersistenceIgnoreState", "YES",
-            "-NSQuitAlwaysKeepsWindows", "NO"
+            "-NSQuitAlwaysKeepsWindows", "NO",
         ]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
@@ -163,7 +163,7 @@ final class SightRealSetupTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-ApplePersistenceIgnoreState", "YES",
-            "-NSQuitAlwaysKeepsWindows", "NO"
+            "-NSQuitAlwaysKeepsWindows", "NO",
         ]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))

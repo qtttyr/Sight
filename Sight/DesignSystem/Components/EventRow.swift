@@ -39,6 +39,18 @@ struct EventRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
+            // The message carries the reason — "Renamed to …", "Kept in
+            // place.", or the error that stopped a move. Without it a failed
+            // move is just an exclamation mark.
+            if let message = event.message, !message.isEmpty {
+                Text(message)
+                    .font(SightFont.micro())
+                    .foregroundStyle(event.outcome == .failed ? theme.textSecondary : theme.textTertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(message)
+            }
+
             Spacer(minLength: 12)
 
             if let category = event.category {

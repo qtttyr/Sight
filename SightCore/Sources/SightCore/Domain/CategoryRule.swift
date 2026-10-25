@@ -59,7 +59,8 @@ public struct CategoryRule: Identifiable, Codable, Hashable, Sendable {
         let separators = CharacterSet(charactersIn: ",;\n•")
         let pieces = prompt.components(separatedBy: separators) + [name]
         for piece in pieces {
-            let cleaned = piece
+            let cleaned =
+                piece
                 .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
             guard cleaned.count >= 2 else { continue }
             if seen.insert(cleaned.lowercased()).inserted { result.append(cleaned) }

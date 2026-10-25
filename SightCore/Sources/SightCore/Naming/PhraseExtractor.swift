@@ -23,7 +23,8 @@ public enum PhraseExtractor {
             options: [.omitWhitespace, .omitPunctuation, .joinNames]
         ) { tag, range in
             let word = String(text[range])
-            let keeps = (tag == .noun || tag == .adjective)
+            let keeps =
+                (tag == .noun || tag == .adjective)
                 && word.contains(where: \.isLetter)
                 && word.count >= 2
             if keeps {
@@ -42,7 +43,8 @@ public enum PhraseExtractor {
             let words = Array(run.suffix(maxWords))
             phrases.append(tidy(words))
         }
-        return phrases
+        return
+            phrases
             .filter { $0.split(separator: " ").count >= 2 || $0.count >= 7 }
             .sorted { $0.split(separator: " ").count > $1.split(separator: " ").count }
     }

@@ -99,7 +99,7 @@ public final class ScanMemory: @unchecked Sendable {
         let key = fileSnapshot.id
         guard let entry = file.entries[key] else { return nil }
         guard entry.fileSize == fileSnapshot.size,
-              abs(entry.modifiedAt.timeIntervalSince(fileSnapshot.modifiedAt)) < 2
+            abs(entry.modifiedAt.timeIntervalSince(fileSnapshot.modifiedAt)) < 2
         else { return nil }
         return entry
     }
@@ -156,17 +156,52 @@ public final class ScanMemory: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard isDirty else { return }
-        isDirty = false
-        ScanMemory.write(file: file, to: url)
+        // Only a successful write clears the flag: a failed write has to be
+        // retried, not forgotten.
+        if ScanMemory.write(file: file, to: url) { isDirty = false }
     }
 
     /// Forgets every remembered decision.
     public func reset() {
         lock.lock()
-        defer { lock.unlock() }
         file.entries = [:]
         isDirty = true
+        lock.unlock()
+        // Written outside the lock: `persist` takes it too, and `NSLock` is
+        // not recursive.
         persist()
+    }
+
+    /// Marks files as "the user wants them to stay here".
+    ///
+    /// Used after an undo: the file is back in the watched folder, and the
+    /// next sweep must not move it away again.
+    public func dismiss(files snapshots: [FileSnapshot]) {
+        guard !snapshots.isEmpty else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        for snapshot in snapshots {
+            if var entry = file.entries[snapshot.id] {
+                entry.dismissed = true
+                file.entries[snapshot.id] = entry
+            } else {
+                // The file was never classified (or its memory was pruned):
+                // remember only that it must stay put.
+                file.entries[snapshot.id] = ScanMemoryEntry(
+                    fileName: snapshot.name,
+                    filePath: snapshot.id,
+                    modifiedAt: snapshot.modifiedAt,
+                    fileSize: snapshot.size,
+                    ruleID: nil,
+                    ruleName: nil,
+                    score: 0,
+                    accepted: false,
+                    recordedAt: .now,
+                    dismissed: true
+                )
+            }
+        }
+        isDirty = true
     }
 
     // MARK: - Disk
@@ -185,7 +220,8 @@ public final class ScanMemory: @unchecked Sendable {
         }
     }
 
-    private static func write(file: ScanMemoryFile, to url: URL) {
+    @discardableResult
+    private static func write(file: ScanMemoryFile, to url: URL) -> Bool {
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
@@ -196,8 +232,10 @@ public final class ScanMemory: @unchecked Sendable {
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(file)
             try data.write(to: url, options: .atomic)
+            return true
         } catch {
             // Memory is an optimization, never a correctness requirement.
+            return false
         }
     }
 }

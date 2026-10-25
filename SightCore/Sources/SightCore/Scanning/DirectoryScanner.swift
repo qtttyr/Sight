@@ -8,7 +8,7 @@ public struct DirectoryScanner: Sendable {
     public func scan(root: URL, includeHidden: Bool = false) throws -> [FileSnapshot] {
         let keys: [URLResourceKey] = [
             .isDirectoryKey, .isSymbolicLinkKey, .isHiddenKey, .isRegularFileKey,
-            .fileSizeKey, .contentModificationDateKey, .contentTypeKey
+            .fileSizeKey, .contentModificationDateKey, .contentTypeKey,
         ]
         let options: FileManager.DirectoryEnumerationOptions = includeHidden ? [] : [.skipsHiddenFiles]
         let urls = try FileManager.default.contentsOfDirectory(
@@ -17,14 +17,17 @@ public struct DirectoryScanner: Sendable {
             options: options
         )
 
-        return try urls.compactMap { url -> FileSnapshot? in
-            let snapshot = try FileSnapshot(url: url)
+        // A single unreadable file — deleted between the listing and the
+        // read, or blocked by the sandbox — must not lose the whole folder.
+        var snapshots: [FileSnapshot] = []
+        for url in urls {
+            guard let snapshot = try? FileSnapshot(url: url) else { continue }
             guard !snapshot.isDirectory, !snapshot.isSymbolicLink, !snapshot.isTemporary else {
-                return nil
+                continue
             }
-            return snapshot
+            snapshots.append(snapshot)
         }
-        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        return snapshots.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     public func isReady(_ file: FileSnapshot, grace: TimeInterval = 1.5) -> Bool {

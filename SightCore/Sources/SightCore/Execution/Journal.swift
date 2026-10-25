@@ -107,7 +107,6 @@ public actor Journal {
         }
     }
 
-
     private func ensureFileExists() throws {
         let directory = url.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

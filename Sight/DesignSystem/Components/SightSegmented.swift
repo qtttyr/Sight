@@ -8,6 +8,8 @@ struct SightSegment<Value: Hashable>: Identifiable {
 struct SightSegmented<Value: Hashable>: View {
     let options: [SightSegment<Value>]
     @Binding var selection: Value
+    /// Names the group for VoiceOver, e.g. "Sorting mode".
+    var label: String?
 
     @Environment(\.sightTheme) private var theme
 
@@ -32,10 +34,16 @@ struct SightSegmented<Value: Hashable>: View {
                         }
                 }
                 .buttonStyle(.plain)
+                // The selected segment used to be marked by colour alone,
+                // which tells a screen reader nothing.
+                .accessibilityLabel(option.label)
+                .accessibilityAddTraits(selection == option.id ? [.isSelected, .isButton] : .isButton)
             }
         }
         .padding(2)
         .background(theme.hover)
         .clipShape(Capsule())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label ?? "")
     }
 }

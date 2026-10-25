@@ -55,7 +55,38 @@ actor CoreAIEmbeddingProvider: EmbeddingProviding {
             throw EmbeddingError.unsupportedModality("Images are disabled in Settings.")
         }
         do {
-            return try await model.embedImage(url: url, applyEXIFOrientation: true, dim: 768)
+            // The fast preparation is several times quicker and the model
+            // cannot tell the difference. If anything about a picture trips
+            // it up, the exact vendored path takes over.
+            let inputs = try ImagePreparation.inputs(for: url)
+            return try await model.embedImage(inputs, dim: 768)
+        } catch {
+            do {
+                return try await model.embedImage(url: url, applyEXIFOrientation: true, dim: 768)
+            } catch {
+                throw EmbeddingError.underlying(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Embeds a picture with the vendored, bit-exact preparation. Kept for
+    /// the profiler: it is the yardstick the fast path is measured against.
+    func embedExact(imageAt url: URL) async throws -> [Float] {
+        guard let model else { throw EmbeddingError.modelUnavailable }
+        guard model.hasVision else {
+            throw EmbeddingError.unsupportedModality("Images are disabled in Settings.")
+        }
+        return try await model.embedImage(url: url, applyEXIFOrientation: true, dim: 768)
+    }
+
+    /// Embeds a picture that is already prepared for the vision tower.
+    func embed(prepared inputs: VisionInputs) async throws -> [Float] {
+        guard let model else { throw EmbeddingError.modelUnavailable }
+        guard model.hasVision else {
+            throw EmbeddingError.unsupportedModality("Images are disabled in Settings.")
+        }
+        do {
+            return try await model.embedImage(inputs, dim: 768)
         } catch {
             throw EmbeddingError.underlying(error.localizedDescription)
         }

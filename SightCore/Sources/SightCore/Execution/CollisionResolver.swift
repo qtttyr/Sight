@@ -15,7 +15,8 @@ public struct CollisionResolver: Sendable {
         var index = 1
 
         while index < 1_000 {
-            let candidateName = pathExtension.isEmpty
+            let candidateName =
+                pathExtension.isEmpty
                 ? "\(base) (\(index))"
                 : "\(base) (\(index)).\(pathExtension)"
             let candidate = directory.appendingPathComponent(candidateName)

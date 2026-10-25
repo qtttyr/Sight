@@ -71,15 +71,17 @@ public struct FileContextExtractor: Sendable {
 
     private static func typeDescription(for file: FileSnapshot) -> String? {
         let description = file.contentType.localizedDescription ?? ""
-        if description.isEmpty || file.contentType == .data { return file.fileExtension.isEmpty ? nil : "\(file.fileExtension) file" }
+        if description.isEmpty || file.contentType == .data {
+            return file.fileExtension.isEmpty ? nil : "\(file.fileExtension) file"
+        }
         return description
     }
 
     private func documentTitle(of file: FileSnapshot) -> String? {
         guard file.contentType.conforms(to: .pdf) || file.fileExtension == "pdf",
-              let document = PDFDocument(url: file.url),
-              let title = document.documentAttributes?[PDFDocumentAttribute.titleAttribute] as? String,
-              NameCleaner.isInformative(NameCleaner.clean(title))
+            let document = PDFDocument(url: file.url),
+            let title = document.documentAttributes?[PDFDocumentAttribute.titleAttribute] as? String,
+            NameCleaner.isInformative(NameCleaner.clean(title))
         else { return nil }
         return title
     }
@@ -105,7 +107,8 @@ public struct FileContextExtractor: Sendable {
 
         if type.conforms(to: .text) || type.conforms(to: .sourceCode)
             || type.conforms(to: .json) || type.conforms(to: .xml)
-            || Self.plainTextExtensions.contains(ext) || ext.isEmpty {
+            || Self.plainTextExtensions.contains(ext) || ext.isEmpty
+        {
             return plainText(at: file.url)
         }
         return ""
@@ -115,7 +118,7 @@ public struct FileContextExtractor: Sendable {
         "txt", "md", "markdown", "csv", "tsv", "json", "jsonl", "yaml", "yml", "toml", "xml",
         "css", "scss", "js", "ts", "tsx", "jsx", "swift", "py", "rb", "go", "rs", "java", "kt",
         "c", "h", "cpp", "hpp", "m", "mm", "sh", "zsh", "fish", "sql", "log", "ini", "conf",
-        "env", "tex", "srt", "vtt"
+        "env", "tex", "srt", "vtt",
     ]
 
     private func plainText(at url: URL) -> String {
@@ -125,7 +128,8 @@ public struct FileContextExtractor: Sendable {
         guard !data.isEmpty else { return "" }
         // Binary blobs (gguf, models) must not be fed as "text".
         if data.prefix(2048).contains(0) { return "" }
-        let decoded = String(data: data, encoding: .utf8)
+        let decoded =
+            String(data: data, encoding: .utf8)
             ?? String(data: data, encoding: .utf16)
             ?? String(data: data, encoding: .isoLatin1)
             ?? ""
@@ -136,7 +140,8 @@ public struct FileContextExtractor: Sendable {
         guard let document = PDFDocument(url: url) else { return "" }
         var pieces: [String] = []
         if let title = document.documentAttributes?[PDFDocumentAttribute.titleAttribute] as? String,
-           NameCleaner.isInformative(title) {
+            NameCleaner.isInformative(title)
+        {
             pieces.append(title)
         }
         for index in 0..<min(document.pageCount, Self.maxPDFPages) {
@@ -182,7 +187,7 @@ public struct FileContextExtractor: Sendable {
     /// the type description. Returns an empty string when nothing is readable.
     private func officeArchiveText(at url: URL) -> String {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe),
-              let archive = ZipTextPeek(data: data)
+            let archive = ZipTextPeek(data: data)
         else { return "" }
         return String(archive.readableText().prefix(Self.maxTextCharacters))
     }

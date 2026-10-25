@@ -38,9 +38,13 @@ extension AppModel {
             await refreshFingerprints()
             startMonitoring()
             #if DEBUG
-            if Evaluation.isEnabled {
-                await Evaluation.run(model: self)
-            }
+                if Evaluation.isBenchmarkEnabled {
+                    await Evaluation.runBenchmark(model: self)
+                    exit(0)
+                }
+                if Evaluation.isEnabled {
+                    await Evaluation.run(model: self)
+                }
             #endif
         } catch {
             self.modelState = .failed(error.localizedDescription)

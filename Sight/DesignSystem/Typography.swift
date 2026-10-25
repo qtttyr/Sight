@@ -26,11 +26,11 @@ enum SightFont {
     }
 
     static func micro() -> Font {
-        .system(size: 9, weight: .semibold, design: .monospaced)
+        .system(size: 10, weight: .semibold, design: .monospaced)
     }
 
     static func mono() -> Font {
-        .system(size: 11, weight: .regular, design: .monospaced)
+        .system(size: 12, weight: .regular, design: .monospaced)
     }
 }
 

@@ -71,15 +71,38 @@ public final class ExampleStore: @unchecked Sendable {
                 && $0.fileName == example.fileName
         }
         examples.append(example)
-        let sameKind = examples.filter { $0.ruleID == example.ruleID && $0.isImage == example.isImage }
-        if sameKind.count > Self.capacityPerRule {
-            let overflow = sameKind.count - Self.capacityPerRule
-            let doomed = Set(sameKind.sorted { $0.date < $1.date }.prefix(overflow).map(\.date))
-            examples.removeAll {
-                $0.ruleID == example.ruleID && $0.isImage == example.isImage && doomed.contains($0.date)
-            }
-        }
+        evictOverflow()
         isDirty = true
+    }
+
+    /// Keeps every rule within its capacity.
+    ///
+    /// The oldest examples fall out first. They are identified by position,
+    /// never by date: dates are stored with second precision, so several
+    /// examples learned in the same second would otherwise be treated as one
+    /// and a single new example would wipe all of them.
+    private func evictOverflow() {
+        let kinds = Set(examples.map { ExampleKind(ruleID: $0.ruleID, isImage: $0.isImage) })
+        for kind in kinds {
+            let indices = examples.indices.filter {
+                examples[$0].ruleID == kind.ruleID && examples[$0].isImage == kind.isImage
+            }
+            guard indices.count > Self.capacityPerRule else { continue }
+            let overflow = indices.count - Self.capacityPerRule
+            // Sorted by date, and by position for equal dates, so the oldest
+            // examples fall out in the order they were learned.
+            let oldest = indices.sorted { a, b in
+                if examples[a].date != examples[b].date { return examples[a].date < examples[b].date }
+                return a < b
+            }.prefix(overflow)
+            let doomed = Set(oldest)
+            examples = examples.enumerated().filter { !doomed.contains($0.offset) }.map(\.element)
+        }
+    }
+
+    private struct ExampleKind: Hashable {
+        let ruleID: UUID
+        let isImage: Bool
     }
 
     /// Drops examples of rules that no longer exist.
@@ -104,7 +127,6 @@ public final class ExampleStore: @unchecked Sendable {
     }
 
     private func write() {
-        isDirty = false
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
@@ -113,6 +135,9 @@ public final class ExampleStore: @unchecked Sendable {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             try encoder.encode(examples).write(to: url, options: .atomic)
+            // Only a successful write clears the flag: a failed write has to
+            // be retried, not forgotten.
+            isDirty = false
         } catch {
             // Learning is an optimization, never a correctness requirement.
         }

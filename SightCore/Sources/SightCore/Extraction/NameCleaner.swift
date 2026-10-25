@@ -13,7 +13,7 @@ public enum NameCleaner {
         "download", "downloads", "file", "files", "document", "doc", "screenshot",
         "screen", "shot", "capture", "mvimg", "video", "vid", "audio", "unknown",
         "temp", "tmp", "draft", "version", "edited", "export", "exported", "whatsapp",
-        "telegram", "attachment", "noname", "mov", "mp4", "png", "jpg", "jpeg", "heic"
+        "telegram", "attachment", "noname", "mov", "mp4", "png", "jpg", "jpeg", "heic",
     ]
 
     public static func clean(_ fileName: String) -> String {
@@ -39,7 +39,8 @@ public enum NameCleaner {
             options: .regularExpression
         )
 
-        let words = base
+        let words =
+            base
             .split(whereSeparator: { $0.isWhitespace })
             .map(String.init)
             .filter { token in
@@ -59,11 +60,13 @@ public enum NameCleaner {
     /// True when the cleaned name contains at least one real word, i.e. the
     /// name is worth embedding. `IMG 0059` is not; `pixel art kitchen atlas` is.
     public static func isInformative(_ cleaned: String) -> Bool {
-        let words = cleaned
+        let words =
+            cleaned
             .lowercased()
             .split(whereSeparator: { !$0.isLetter })
             .map(String.init)
-            .filter { $0.count >= 2 && !genericWords.contains($0) }
+            // Two-letter leftovers like "at" or "in" are grammar, not meaning.
+            .filter { $0.count >= 3 && !genericWords.contains($0) }
         return !words.isEmpty
     }
 }

@@ -33,7 +33,8 @@ struct InsightsView: View {
     private var categoryItems: [CountItem] {
         let grouped = Dictionary(grouping: model.events.compactMap(\.category), by: { $0 })
         let total = max(grouped.values.reduce(0) { $0 + $1.count }, 1)
-        return grouped
+        return
+            grouped
             .map { CountItem(id: $0.key, label: $0.key, count: $0.value.count, total: total) }
             .sorted { $0.count > $1.count }
     }
@@ -197,10 +198,12 @@ struct InsightsView: View {
                 detailRow("DIMENSION", value: model.config.dimension.label)
                 detailRow("VISION", value: model.config.loadVision ? "ON" : "OFF")
                 detailRow("AUDIO", value: model.config.loadAudio ? "ON" : "OFF")
-                detailRow("ON DISK", value: ByteCountFormatter.string(
-                    fromByteCount: model.modelDiskUsage,
-                    countStyle: .file
-                ))
+                detailRow(
+                    "ON DISK",
+                    value: ByteCountFormatter.string(
+                        fromByteCount: model.modelDiskUsage,
+                        countStyle: .file
+                    ))
             }
         }
         .frame(maxWidth: .infinity)

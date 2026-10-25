@@ -11,38 +11,38 @@ public struct TypeAnalyzer: Sendable {
     // MARK: - Tables
 
     private static let video: Set<String> = [
-        "mp4", "mov", "m4v", "mkv", "avi", "webm", "mpg", "mpeg", "wmv", "flv", "3gp", "mts", "m2ts"
+        "mp4", "mov", "m4v", "mkv", "avi", "webm", "mpg", "mpeg", "wmv", "flv", "3gp", "mts", "m2ts",
     ]
     private static let audio: Set<String> = [
-        "mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "aiff", "aif", "wma", "caf", "amr", "mid", "midi"
+        "mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "aiff", "aif", "wma", "caf", "amr", "mid", "midi",
     ]
     private static let archives: Set<String> = [
-        "zip", "tgz", "gz", "tar", "rar", "7z", "dmg", "pkg", "iso", "xz", "bz2", "zst", "cab", "mpkg", "xip"
+        "zip", "tgz", "gz", "tar", "rar", "7z", "dmg", "pkg", "iso", "xz", "bz2", "zst", "cab", "mpkg", "xip",
     ]
     private static let sourceCode: Set<String> = [
         "swift", "py", "js", "jsx", "tsx", "rb", "go", "rs", "java", "kt", "c", "h", "cpp", "hpp",
         "m", "mm", "cs", "php", "sh", "zsh", "bash", "fish", "sql", "lua", "dart", "r", "scala",
-        "pl", "css", "scss", "ipynb", "gradle", "xcconfig", "pbxproj", "entitlements"
+        "pl", "css", "scss", "ipynb", "gradle", "xcconfig", "pbxproj", "entitlements",
     ]
     private static let dataAndConfig: Set<String> = [
         "json", "jsonl", "yaml", "yml", "toml", "xml", "ini", "conf", "env", "plist", "log",
-        "gguf", "safetensors", "ckpt", "pt", "pth", "onnx", "mlmodel", "mlpackage", "parquet"
+        "gguf", "safetensors", "ckpt", "pt", "pth", "onnx", "mlmodel", "mlpackage", "parquet",
     ]
     private static let devFileNames: Set<String> = [
         "dockerfile", "makefile", "modelfile", "podfile", "gemfile", "procfile", "brewfile",
-        "rakefile", "vagrantfile", "cmakelists.txt", "requirements.txt", "package.json"
+        "rakefile", "vagrantfile", "cmakelists.txt", "requirements.txt", "package.json",
     ]
     private static let design: Set<String> = [
         "psd", "psb", "ai", "eps", "indd", "sketch", "fig", "xd", "afdesign", "afphoto", "afpub",
         "ttf", "otf", "woff", "woff2", "ttc", "blend", "obj", "fbx", "stl", "usdz", "glb", "gltf",
-        "c4d", "icns", "ico", "svg", "figma"
+        "c4d", "icns", "ico", "svg", "figma",
     ]
     private static let documents: Set<String> = [
-        "pdf", "doc", "docx", "pages", "rtf", "rtfd", "txt", "md", "markdown", "odt", "tex", "epub", "mobi", "djvu"
+        "pdf", "doc", "docx", "pages", "rtf", "rtfd", "txt", "md", "markdown", "odt", "tex", "epub", "mobi", "djvu",
     ]
     private static let ebooks: Set<String> = ["epub", "mobi", "djvu"]
     private static let office: Set<String> = [
-        "xls", "xlsx", "numbers", "ppt", "pptx", "key", "ods", "odp"
+        "xls", "xlsx", "numbers", "ppt", "pptx", "key", "ods", "odp",
     ]
     private static let tabular: Set<String> = ["csv", "tsv"]
     private static let cameraRaw: Set<String> = ["dng", "raw", "cr2", "cr3", "nef", "arw", "orf", "rw2"]
@@ -61,13 +61,13 @@ public struct TypeAnalyzer: Sendable {
         [900, 1440], [1117, 1728], [1329, 2056], [800, 1280], [1440, 2560], [1600, 2560],
         [1800, 2880], [1050, 1680], [956, 1470], [982, 1512], [1112, 1728], [1212, 1940],
         [1440, 2304], [1964, 3024], [2234, 3456], [1080, 1920], [1440, 3440], [2160, 3840],
-        [2880, 5120], [1912, 2940], [2100, 3360], [1200, 1920]
+        [2880, 5120], [1912, 2940], [2100, 3360], [1200, 1920],
     ]
 
     /// Widths of real phone and tablet screens. A JPEG or PNG exactly this
     /// wide, with no camera metadata, is a screen capture that was cropped.
     private static let screenWidths: Set<Int> = [
-        640, 750, 828, 1080, 1125, 1170, 1179, 1206, 1242, 1284, 1290, 1320, 1536, 1620, 1640, 1668, 2048, 2064
+        640, 750, 828, 1080, 1125, 1170, 1179, 1206, 1242, 1284, 1290, 1320, 1536, 1620, 1640, 1668, 2048, 2064,
     ]
 
     private static let screenshotName =
@@ -195,7 +195,8 @@ public struct TypeAnalyzer: Sendable {
 
             let sizeKey = [facts.shortSide, facts.longSide]
             let isScreenSize = Self.screenSizes.contains(sizeKey)
-            let isCroppedScreen = !isScreenSize
+            let isCroppedScreen =
+                !isScreenSize
                 && Self.screenWidths.contains(facts.pixelWidth)
                 && facts.pixelHeight <= 2_900
             if isCroppedScreen, ext != "gif" {
@@ -217,7 +218,8 @@ public struct TypeAnalyzer: Sendable {
         }
 
         if Self.photoFormats.contains(ext), Self.matches(Self.cameraName, name),
-           profile.boosts[.screenshots] == nil {
+            profile.boosts[.screenshots] == nil
+        {
             profile.boost(.photos, 0.3, because: "Named like a camera photo")
         }
     }

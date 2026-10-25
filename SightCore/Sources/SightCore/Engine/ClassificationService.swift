@@ -54,6 +54,19 @@ public actor ClassificationService {
         var bestAnchor: String?
     }
 
+    /// Where the time of a classification went. Performance work needs
+    /// numbers, not guesses.
+    public struct Timings: Sendable {
+        /// The text tower.
+        public var textEmbed: TimeInterval = 0
+        /// The vision tower.
+        public var imageEmbed: TimeInterval = 0
+        /// Comparing the file against every rule.
+        public var compare: TimeInterval = 0
+        /// Looking at the examples the user confirmed.
+        public var learned: TimeInterval = 0
+    }
+
     public var tuning = Tuning()
 
     private let provider: any EmbeddingProviding
@@ -61,6 +74,13 @@ public actor ClassificationService {
     private var cache: [UUID: RuleVectors] = [:]
     private var textMean: [Float] = []
     private var imageMean: [Float] = []
+
+    /// Timings of the last classification, for the profiler.
+    public private(set) var timings = Timings()
+
+    /// The plain vectors of the file that was classified last. The caller
+    /// can reuse them instead of embedding the very same file a second time.
+    public private(set) var lastVectors: (text: [Float]?, image: [Float]?) = (nil, nil)
 
     public init(provider: any EmbeddingProviding, examples: ExampleStore? = nil) {
         self.provider = provider
@@ -118,6 +138,7 @@ public actor ClassificationService {
         dimension: Int,
         confidence: Float = SightConfig.defaultConfidence
     ) async throws -> RoutingDecision {
+        timings = Timings()
         let validRules = rules.filter { $0.isValid && cache[$0.id] != nil }
         guard !validRules.isEmpty else {
             return empty(for: context.file)
@@ -215,17 +236,21 @@ public actor ClassificationService {
 
     private func observe(context: FileContext, dimension: Int) async throws -> Observation {
         var observation = Observation()
+        var rawText: [Float]?
+        var rawImage: [Float]?
         let cleanText = (context.text ?? context.hint)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let cleanText, !cleanText.isEmpty {
-            let query = VectorMath.prefix(
-                VectorMath.normalize(try await provider.embed(text: cleanText, kind: .classification)),
-                dimension: dimension
-            )
+            let started = ContinuousClock.now
+            let embedded = try await provider.embed(text: cleanText, kind: .classification)
+            timings.textEmbed += (ContinuousClock.now - started).seconds
+            rawText = VectorMath.normalize(embedded)
+            let query = VectorMath.prefix(rawText!, dimension: dimension)
             observation.textQuery = query
             let mean = VectorMath.prefix(textMean, dimension: dimension)
             let centered = VectorMath.normalize(VectorMath.centered(query, removing: mean))
+            let comparing = ContinuousClock.now
             for (id, vectors) in cache {
                 observation.textEvidence[id] = pooled(
                     query: centered,
@@ -236,15 +261,18 @@ public actor ClassificationService {
                     dimension: dimension
                 )
             }
+            timings.compare += (ContinuousClock.now - comparing).seconds
         }
 
         if let imageURL = context.imageURL {
-            let query = VectorMath.prefix(
-                VectorMath.normalize(try await provider.embed(imageAt: imageURL)),
-                dimension: dimension
-            )
+            let started = ContinuousClock.now
+            let embedded = try await provider.embed(imageAt: imageURL)
+            timings.imageEmbed += (ContinuousClock.now - started).seconds
+            rawImage = VectorMath.normalize(embedded)
+            let query = VectorMath.prefix(rawImage!, dimension: dimension)
             observation.imageQuery = query
             let mean = VectorMath.prefix(imageMean, dimension: dimension)
+            let comparing = ContinuousClock.now
             for (id, vectors) in cache where !vectors.imageAnchors.isEmpty {
                 // Image and text vectors live in different regions of the
                 // space, so only the anchors are centered: the query's
@@ -258,7 +286,9 @@ public actor ClassificationService {
                     dimension: dimension
                 )
             }
+            timings.compare += (ContinuousClock.now - comparing).seconds
         }
+        lastVectors = (rawText, rawImage)
         return observation
     }
 
@@ -284,17 +314,23 @@ public actor ClassificationService {
     }
 
     /// 0…1: how strongly the user's earlier confirmations point at this rule.
-    private func learnedBoost(for ruleID: UUID, observation: Observation, dimension: Int) -> (boost: Float, count: Int) {
+    private func learnedBoost(for ruleID: UUID, observation: Observation, dimension: Int) -> (boost: Float, count: Int)
+    {
         guard let examples else { return (0, 0) }
+        let started = ContinuousClock.now
+        defer { timings.learned += (ContinuousClock.now - started).seconds }
         var strongest: Float = 0
         var used = 0
         for (isImage, query) in [(false, observation.textQuery), (true, observation.imageQuery)] {
-            guard let query, let vectors = examples.vectors(isImage: isImage)[ruleID], !vectors.isEmpty else { continue }
+            guard let query, let vectors = examples.vectors(isImage: isImage)[ruleID], !vectors.isEmpty else {
+                continue
+            }
             let mean = VectorMath.prefix(isImage ? imageMean : textMean, dimension: dimension)
             let centeredQuery = VectorMath.normalize(VectorMath.centered(query, removing: mean))
             let sims = vectors.map { vector -> Float in
                 let reference = VectorMath.prefix(vector, dimension: dimension)
-                return VectorMath.cosine(centeredQuery, VectorMath.normalize(VectorMath.centered(reference, removing: mean)))
+                return VectorMath.cosine(
+                    centeredQuery, VectorMath.normalize(VectorMath.centered(reference, removing: mean)))
             }
             let top = VectorMath.topMean(sims, count: 2)
             let span = max(tuning.exampleCeiling - tuning.exampleFloor, 0.01)
@@ -356,7 +392,9 @@ public actor ClassificationService {
         let topicAnchors = topics.flatMap { isImage ? $0.image : $0.text }
         let mean = VectorMath.mean(ruleAnchors + topicAnchors)
         guard !mean.isEmpty else { return nil }
-        let query = isImage ? VectorMath.normalize(centroid)
+        let query =
+            isImage
+            ? VectorMath.normalize(centroid)
             : VectorMath.normalize(VectorMath.centered(centroid, removing: mean))
 
         func score(_ anchors: [[Float]]) -> Float? {
@@ -391,7 +429,7 @@ public actor ClassificationService {
             return (VectorMath.normalize(raw), true)
         }
         guard let text = context.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty,
-              let raw = try? await provider.embed(text: text, kind: .classification)
+            let raw = try? await provider.embed(text: text, kind: .classification)
         else { return nil }
         return (VectorMath.normalize(raw), false)
     }

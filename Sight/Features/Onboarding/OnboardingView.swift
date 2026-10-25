@@ -13,29 +13,34 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 header
-                Spacer(minLength: 48)
 
-                Group {
-                    switch step {
-                    case 0: welcome
-                    case 1: folderStep
-                    default: modelStep
+                // The step scrolls when the window is short, so nothing is
+                // ever pushed out of reach. The header and the footer stay
+                // put.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Spacer(minLength: 32)
+
+                        Group {
+                            switch step {
+                            case 0: welcome
+                            case 1: folderStep
+                            default: modelStep
+                            }
+                        }
+                        .frame(maxWidth: 680, alignment: .leading)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+
+                        Spacer(minLength: 32)
                     }
                 }
-                .frame(maxWidth: 680, alignment: .leading)
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
+                .scrollIndicators(.hidden)
 
-                Spacer()
                 footer
             }
             .padding(.horizontal, 64)
-            .padding(.top, 72)
-            .padding(.bottom, 40)
-        }
-        .onChange(of: model.rootURL) { _, newValue in
-            if newValue != nil, step == 1 {
-                withAnimation(SightMotion.spring) { step = 2 }
-            }
+            .padding(.top, 40)
+            .padding(.bottom, 24)
         }
     }
 
@@ -96,16 +101,14 @@ struct OnboardingView: View {
                 .buttonStyle(SightButtonStyle(kind: .ghost))
 
                 Button("Use Downloads") {
-                    let downloads = FileManager.default.homeDirectoryForCurrentUser
-                        .appendingPathComponent("Downloads", isDirectory: true)
-                    model.setRoot(downloads)
+                    model.useDownloadsFolder()
                 }
                 .buttonStyle(SightButtonStyle(kind: .primary))
             }
 
             Hairline()
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("STARTER RULES")
                     .font(SightFont.micro())
                     .tracking(0.14)
@@ -116,20 +119,18 @@ struct OnboardingView: View {
                         .font(SightFont.body())
                         .foregroundStyle(theme.textTertiary)
                 } else {
-                    ForEach(model.rules) { rule in
-                        HStack(alignment: .top, spacing: 14) {
-                            Text(rule.name)
-                                .font(SightFont.label())
-                                .foregroundStyle(theme.textPrimary)
-                                .frame(width: 70, alignment: .leading)
-                            Text(rule.prompt)
-                                .font(SightFont.body())
-                                .foregroundStyle(theme.textTertiary)
-                                .lineLimit(2)
+                    // The list scrolls and never grows past its share of the
+                    // window: the buttons below have to stay reachable at
+                    // every window size, not only at full screen.
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(model.rules) { rule in
+                                starterRuleRow(rule)
+                            }
                         }
-                        .padding(.vertical, 10)
-                        .overlay(alignment: .bottom) { Hairline() }
                     }
+                    .scrollIndicators(.hidden)
+                    .frame(maxHeight: 300)
                 }
             }
 
@@ -147,6 +148,38 @@ struct OnboardingView: View {
                 .opacity(model.rootURL == nil ? 0.35 : 1)
             }
         }
+    }
+
+    /// One starter rule: its name and a single line saying what it catches.
+    /// The full prompt is a screen of text and belongs in the rule editor.
+    private func starterRuleRow(_ rule: CategoryRule) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text(rule.name)
+                .font(SightFont.label())
+                .foregroundStyle(theme.textPrimary)
+                .frame(width: 84, alignment: .leading)
+            Text(Self.summary(of: rule))
+                .font(SightFont.body())
+                .foregroundStyle(theme.textTertiary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 7)
+        .overlay(alignment: .bottom) { Hairline() }
+    }
+
+    /// The one-line description of a rule: the library's own wording when
+    /// there is one, the first ideas of the prompt otherwise.
+    private static func summary(of rule: CategoryRule) -> String {
+        if let template = RuleLibrary.template(named: rule.name) {
+            return template.catches
+        }
+        let ideas = rule.prompt
+            .components(separatedBy: CharacterSet(charactersIn: ",;\n•"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return ideas.prefix(3).joined(separator: " · ")
     }
 
     private var modelStep: some View {

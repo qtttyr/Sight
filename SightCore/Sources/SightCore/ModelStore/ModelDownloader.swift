@@ -37,7 +37,7 @@ public final class ModelDownloader: NSObject, URLSessionDownloadDelegate, @unche
         var error: Error?
     }
 
-    private var session: URLSession!
+    private var session: URLSession?
     private var states: [Int: State] = [:]
     private let lock = NSLock()
 
@@ -58,6 +58,7 @@ public final class ModelDownloader: NSObject, URLSessionDownloadDelegate, @unche
         guard let url = URL(string: "\(ModelManifest.baseURL)/\(file.path)") else {
             throw ModelDownloadError.missingFile(file.path)
         }
+        guard let session else { throw ModelDownloadError.missingFile(file.path) }
         let task = session.downloadTask(with: url)
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             lock.lock()
@@ -85,11 +86,12 @@ public final class ModelDownloader: NSObject, URLSessionDownloadDelegate, @unche
         lock.unlock()
         guard let state else { return }
         let total = totalBytesExpectedToWrite > 0 ? totalBytesExpectedToWrite : state.file.size
-        state.progress(DownloadProgress(
-            fileName: state.file.path,
-            bytesWritten: totalBytesWritten,
-            totalBytes: total
-        ))
+        state.progress(
+            DownloadProgress(
+                fileName: state.file.path,
+                bytesWritten: totalBytesWritten,
+                totalBytes: total
+            ))
     }
 
     public func urlSession(
@@ -98,7 +100,7 @@ public final class ModelDownloader: NSObject, URLSessionDownloadDelegate, @unche
         didFinishDownloadingTo location: URL
     ) {
         lock.lock()
-        var state = states[downloadTask.taskIdentifier]
+        let state = states[downloadTask.taskIdentifier]
         lock.unlock()
         guard var state else { return }
 

@@ -36,11 +36,18 @@ struct MenuBarView: View {
 
             VStack(spacing: 2) {
                 menuButton("Sweep Now", icon: "arrow.clockwise") {
-                    Task { await model.runSweep() }
+                    Task { await model.runSweepWithFeedback() }
+                }
+                if !model.pendingDecisions.isEmpty {
+                    menuButton("Review \(model.pendingDecisions.count)", icon: "tray.full") {
+                        NSApp.activate(ignoringOtherApps: true)
+                        openMainWindow()
+                        model.activeSheet = .review
+                    }
                 }
                 menuButton("Open Sight", icon: "macwindow") {
                     NSApp.activate(ignoringOtherApps: true)
-                    NSApp.windows.first(where: { $0.canBecomeKey })?.makeKeyAndOrderFront(nil)
+                    openMainWindow()
                 }
                 menuButton("Quit", icon: "power") {
                     NSApp.terminate(nil)
@@ -50,6 +57,20 @@ struct MenuBarView: View {
         .padding(18)
         .frame(width: 280)
         .background(theme.ink)
+    }
+
+    /// Brings the main window forward. Picking "the first window that can
+    /// become key" could land on the menu-bar panel instead.
+    private func openMainWindow() {
+        if let main = NSApp.mainWindow {
+            main.makeKeyAndOrderFront(nil)
+            return
+        }
+        NSApp.windows
+            .filter { $0.isVisible && $0.canBecomeKey }
+            .sorted { $0.frame.width > $1.frame.width }
+            .first?
+            .makeKeyAndOrderFront(nil)
     }
 
     private func menuButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {

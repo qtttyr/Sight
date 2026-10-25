@@ -9,13 +9,39 @@ on:
 jobs:
   core:
     name: SightCore tests
-    runs-on: macos-15
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-swift@v6
-        with:
-          swift-version: '6.2'
-      - name: Run SightCore tests
+
+      # The package needs the macOS 27 SDK, so the newest Xcode is the only
+      # one that can build it.
+      - name: Select the newest Xcode
         run: |
-          cd SightCore
-          swift test --scratch-path .build
+          latest=$(ls /Applications | grep -E '^Xcode' | sort -V | tail -1)
+          echo "Using $latest"
+          echo "DEVELOPER_DIR=/Applications/$latest/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Run SightCore tests
+        run: swift test --package-path SightCore --scratch-path SightCore/.build
+
+  app:
+    name: App build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest Xcode
+        run: |
+          latest=$(ls /Applications | grep -E '^Xcode' | sort -V | tail -1)
+          echo "Using $latest"
+          echo "DEVELOPER_DIR=/Applications/$latest/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Build the app
+        run: |
+          xcodebuild -scheme Sight -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath .build/DerivedData \
+            build
+
+      - name: Check formatting
+        run: ./scripts/lint.sh

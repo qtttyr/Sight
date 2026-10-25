@@ -84,21 +84,26 @@ struct SettingsView: View {
                     SightSegmented(
                         options: [
                             SightSegment(id: SortMode.review, label: "REVIEW"),
-                            SightSegment(id: SortMode.auto, label: "AUTO")
+                            SightSegment(id: SortMode.auto, label: "AUTO"),
                         ],
-                        selection: modeBinding
+                        selection: modeBinding,
+                        label: "Sorting mode"
                     )
                 }
                 Hairline()
                 row(
                     "Auto-sort confidence",
-                    subtitle: "How sure Sight must be before it moves a file on its own. Everything below still gets a proposal in Review, so nothing is left behind."
+                    subtitle:
+                        "How sure Sight must be before it moves a file on its own. Everything below still gets a proposal in Review, so nothing is left behind."
                 ) {
                     HStack(spacing: 12) {
                         SightSlider(
                             value: confidenceBinding,
-                            range: Double(SightConfig.confidenceRange.lowerBound)...Double(SightConfig.confidenceRange.upperBound),
-                            step: 0.01
+                            range: Double(
+                                SightConfig.confidenceRange.lowerBound)...Double(SightConfig.confidenceRange.upperBound),
+                            step: 0.01,
+                            label: "Auto-sort confidence",
+                            valueLabel: "percent"
                         )
                         .frame(width: 180)
                         Text(String(format: "%.0f%%", model.config.confidence * 100))
@@ -110,39 +115,49 @@ struct SettingsView: View {
                 Hairline()
                 row(
                     "Rename unclear files",
-                    subtitle: "Files named like IMG_0059 or scan_0041 get a clear name taken from the file itself. Names that already say something are never changed, and undo restores the original."
+                    subtitle:
+                        "Files named like IMG_0059 or scan_0041 get a clear name taken from the file itself. Names that already say something are never changed, and undo restores the original."
                 ) {
                     SightSegmented(
                         options: [SightSegment(id: true, label: "ON"), SightSegment(id: false, label: "OFF")],
                         selection: Binding(
                             get: { model.config.renameFiles },
-                            set: { model.config.renameFiles = $0; model.saveConfig() }
-                        )
+                            set: {
+                                model.config.renameFiles = $0; model.saveConfig()
+                            }
+                        ),
+                        label: "Rename unclear files"
                     )
                 }
                 Hairline()
                 row(
                     "Suggest new folders",
-                    subtitle: "When at least five files fit no category but belong together, Sight offers one new folder for them. Never one folder per file."
+                    subtitle:
+                        "When at least five files fit no category but belong together, Sight offers one new folder for them. Never one folder per file."
                 ) {
                     SightSegmented(
                         options: [SightSegment(id: true, label: "ON"), SightSegment(id: false, label: "OFF")],
                         selection: Binding(
                             get: { model.config.suggestFolders },
-                            set: { model.config.suggestFolders = $0; model.saveConfig() }
-                        )
+                            set: {
+                                model.config.suggestFolders = $0; model.saveConfig()
+                            }
+                        ),
+                        label: "Suggest new folders"
                     )
                 }
                 Hairline()
                 row(
                     "Embedding size",
-                    subtitle: "Full size (768) is the most accurate and just as fast. Smaller vectors only help on very constrained Macs."
+                    subtitle:
+                        "Full size (768) is the most accurate and just as fast. Smaller vectors only help on very constrained Macs."
                 ) {
                     SightSegmented(
                         options: EmbeddingDimension.allCases.map {
                             SightSegment(id: $0, label: $0.label)
                         },
-                        selection: dimensionBinding
+                        selection: dimensionBinding,
+                        label: "Embedding size"
                     )
                 }
             }
@@ -161,9 +176,10 @@ struct SettingsView: View {
                         options: [
                             SightSegment(id: ThemeMode.system, label: "SYSTEM"),
                             SightSegment(id: ThemeMode.dark, label: "DARK"),
-                            SightSegment(id: ThemeMode.light, label: "LIGHT")
+                            SightSegment(id: ThemeMode.light, label: "LIGHT"),
                         ],
-                        selection: themeBinding
+                        selection: themeBinding,
+                        label: "Theme"
                     )
                 }
             }
@@ -189,19 +205,27 @@ struct SettingsView: View {
                     "Images",
                     subtitle: "Understand screenshots, photos, and design files."
                 ) {
-                    SightSwitch(isOn: visionBinding)
+                    SightSwitch(
+                        isOn: visionBinding,
+                        label: "Images",
+                        help: "Understand screenshots, photos and design files."
+                    )
                 }
                 Hairline()
                 row(
                     "Audio",
                     subtitle: "Optional. Adds roughly 589 MB to the download."
                 ) {
-                    SightSwitch(isOn: audioBinding)
+                    SightSwitch(
+                        isOn: audioBinding,
+                        label: "Audio",
+                        help: "Adds roughly 589 MB to the download."
+                    )
                 }
                 Hairline()
                 row(
                     "Status",
-                    subtitle: model.modelState.title
+                    subtitle: modelStatusDetail
                 ) {
                     Text(model.formattedModelSize)
                         .font(SightFont.mono())
@@ -224,6 +248,7 @@ struct SettingsView: View {
                             Task { await model.downloadModel() }
                         }
                         .buttonStyle(SightButtonStyle(kind: .primary))
+                        .disabled(model.modelState.isBusy)
                     }
 
                     Spacer()
@@ -248,7 +273,8 @@ struct SettingsView: View {
                 cardTitle("START OVER")
                 row(
                     "Forget everything",
-                    subtitle: "Removes your rules, history and watched folder, then walks you through the setup again. The downloaded model is kept."
+                    subtitle:
+                        "Removes your rules, history and watched folder, then walks you through the setup again. The downloaded model is kept."
                 ) {
                     Button("Start Over") {
                         showResetConfirmation = true
@@ -259,7 +285,8 @@ struct SettingsView: View {
         }
     }
 
-    private var aboutCard: some View {        SightCard {
+    private var aboutCard: some View {
+        SightCard {
             VStack(alignment: .leading, spacing: 14) {
                 cardTitle("ABOUT")
                 HStack {
@@ -388,5 +415,24 @@ struct SettingsView: View {
             return progress
         }
         return nil
+    }
+
+    /// The real reason behind the model state. A bare "MODEL ERROR" leaves
+    /// the user with nothing to act on.
+    private var modelStatusDetail: String {
+        switch model.modelState {
+        case .failed(let message):
+            return message
+        case .ready:
+            return "Ready · \(model.formattedModelSize) on disk"
+        case .downloading:
+            return "Downloading…"
+        case .loading(let message):
+            return message
+        case .checking:
+            return "Checking the local files…"
+        case .notInstalled:
+            return "Not downloaded yet."
+        }
     }
 }

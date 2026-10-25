@@ -42,7 +42,7 @@ public struct FileSnapshot: Identifiable, Hashable, Sendable {
             .isRegularFileKey,
             .fileSizeKey,
             .contentModificationDateKey,
-            .contentTypeKey
+            .contentTypeKey,
         ])
 
         self.id = url.standardizedFileURL.path
@@ -64,7 +64,7 @@ public struct FileSnapshot: Identifiable, Hashable, Sendable {
 
     public var isTemporary: Bool {
         let temporaryExtensions: Set<String> = [
-            "download", "crdownload", "part", "partial", "tmp", "temp", "swp", "lock"
+            "download", "crdownload", "part", "partial", "tmp", "temp", "swp", "lock",
         ]
         if temporaryExtensions.contains(fileExtension) { return true }
         return name.hasPrefix(".") || name == ".DS_Store"

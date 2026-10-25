@@ -8,6 +8,7 @@ struct CommandPaletteView: View {
     @Environment(\.sightTheme) private var theme
     @FocusState private var isSearchFocused: Bool
     @State private var query = ""
+    @State private var highlighted: Int = 0
 
     fileprivate struct PaletteCommand: Identifiable {
         let id = UUID()
@@ -49,7 +50,9 @@ struct CommandPaletteView: View {
                 subtitle: "Pick a template or write your own",
                 icon: "plus.circle",
                 shortcut: "⌘N"
-            ) { model.section = .rules; model.activeSheet = .ruleEditor },
+            ) {
+                model.section = .rules; model.activeSheet = .ruleEditor
+            },
             PaletteCommand(
                 title: "Choose Folder…",
                 subtitle: "Change the watched folder",
@@ -61,7 +64,13 @@ struct CommandPaletteView: View {
                 subtitle: "Classify everything in the root",
                 icon: "arrow.clockwise",
                 shortcut: "⌘R"
-            ) { Task { await model.runSweep() } },
+            ) { Task { await model.runSweepWithFeedback() } },
+            PaletteCommand(
+                title: "Review Queue",
+                subtitle: "Approve or reject the proposed moves",
+                icon: "tray.full",
+                shortcut: "⌘⏎"
+            ) { model.activeSheet = .review },
             PaletteCommand(
                 title: "Undo Last Move",
                 subtitle: "Put the last sorted file back",
@@ -73,7 +82,7 @@ struct CommandPaletteView: View {
                 subtitle: "Switch between dark and light",
                 icon: "circle.lefthalf.filled",
                 shortcut: "⇧⌘L"
-            ) { model.setTheme(model.config.theme == .dark ? .light : .dark) }
+            ) { model.setTheme(model.config.theme == .dark ? .light : .dark) },
         ]
     }
 
@@ -86,7 +95,7 @@ struct CommandPaletteView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
             theme.ink.opacity(0.62)
                 .ignoresSafeArea()
                 .onTapGesture { close() }
@@ -101,8 +110,9 @@ struct CommandPaletteView: View {
                         .font(SightFont.body())
                         .foregroundStyle(theme.textPrimary)
                         .focused($isSearchFocused)
-                        .onSubmit(performFirst)
-                    Text("ESC")
+                        .onSubmit(performHighlighted)
+                        .onChange(of: query) { _, _ in highlighted = 0 }
+                    Text("↑↓ · ⏎ · ESC")
                         .font(SightFont.micro())
                         .foregroundStyle(theme.textFaint)
                 }
@@ -112,8 +122,11 @@ struct CommandPaletteView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 2) {
-                        ForEach(filtered) { command in
-                            PaletteRow(command: command) {
+                        ForEach(Array(filtered.enumerated()), id: \.element.id) { index, command in
+                            PaletteRow(
+                                command: command,
+                                isHighlighted: index == highlighted
+                            ) {
                                 command.action()
                                 close()
                             }
@@ -132,27 +145,45 @@ struct CommandPaletteView: View {
             }
             .frame(width: 560)
             .background(theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: SightRadius.card, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SightRadius.card, style: .continuous)
                     .stroke(theme.lineStrong, lineWidth: 1)
             }
             .shadow(color: .black.opacity(theme.isDark ? 0.5 : 0.12), radius: 40, y: 18)
+            .frame(maxHeight: .infinity)
             .padding(.top, 120)
         }
         .onAppear {
             isSearchFocused = true
+            highlighted = 0
         }
         .onKeyPress(.escape) {
             close()
             return .handled
         }
+        .onKeyPress(.upArrow) {
+            moveHighlight(by: -1)
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            moveHighlight(by: 1)
+            return .handled
+        }
+        .accessibilityAddTraits(.isModal)
         .transition(.opacity.combined(with: .scale(scale: 0.985, anchor: .top)))
     }
 
-    private func performFirst() {
-        guard let first = filtered.first else { return }
-        first.action()
+    private func moveHighlight(by offset: Int) {
+        let count = filtered.count
+        guard count > 0 else { return }
+        highlighted = (highlighted + offset + count) % count
+    }
+
+    private func performHighlighted() {
+        let items = filtered
+        guard highlighted >= 0, highlighted < items.count else { return }
+        items[highlighted].action()
         close()
     }
 
@@ -165,6 +196,7 @@ struct CommandPaletteView: View {
 
 private struct PaletteRow: View {
     let command: CommandPaletteView.PaletteCommand
+    let isHighlighted: Bool
     let action: () -> Void
 
     @Environment(\.sightTheme) private var theme
@@ -183,24 +215,26 @@ private struct PaletteRow: View {
                         .foregroundStyle(theme.textPrimary)
                     Text(command.subtitle)
                         .font(SightFont.micro())
-                        .foregroundStyle(theme.textFaint)
+                        .foregroundStyle(theme.textTertiary)
                 }
                 Spacer()
                 if let shortcut = command.shortcut {
                     Text(shortcut)
                         .font(SightFont.micro())
-                        .foregroundStyle(theme.textFaint)
+                        .foregroundStyle(theme.textTertiary)
                 }
             }
             .padding(.horizontal, 12)
             .frame(height: 48)
             .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isHovering ? theme.hover : Color.clear)
+                    .fill(isHighlighted ? theme.active : (isHovering ? theme.hover : Color.clear))
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+        .accessibilityLabel(command.title)
+        .accessibilityHint(command.subtitle)
     }
 }

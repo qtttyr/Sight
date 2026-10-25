@@ -2,7 +2,8 @@ import Foundation
 
 public enum AppPaths {
     public static var applicationSupport: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
         return base.appendingPathComponent("Sight", isDirectory: true)
     }
@@ -13,7 +14,9 @@ public enum AppPaths {
     public static var scanMemoryURL: URL { applicationSupport.appendingPathComponent("scan-memory.json") }
     public static var examplesURL: URL { applicationSupport.appendingPathComponent("learned-examples.json") }
     public static var modelsDirectory: URL { applicationSupport.appendingPathComponent("Models", isDirectory: true) }
-    public static var modelDirectory: URL { modelsDirectory.appendingPathComponent("EmbeddingGemma2", isDirectory: true) }
+    public static var modelDirectory: URL {
+        modelsDirectory.appendingPathComponent("EmbeddingGemma2", isDirectory: true)
+    }
 
     public static func ensureDirectories() throws {
         try FileManager.default.createDirectory(at: applicationSupport, withIntermediateDirectories: true)
