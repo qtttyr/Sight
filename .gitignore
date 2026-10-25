@@ -44,3 +44,12 @@ node_modules/
 
 # local model copies that may be pulled during development
 SightCore/Sources/SightCore/ModelStore/models/
+
+# dev tooling / generated
+.playwright-mcp/
+opencode.json
+sight-landing/AGENTS.md
+sight-landing/example-files/
+sight-landing/.next/
+sight-landing/tsconfig.tsbuildinfo
+assets/

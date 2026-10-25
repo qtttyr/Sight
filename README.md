@@ -1,117 +1,116 @@
-<div align="center">
-
 # Sight
 
-**Your files, sorted by meaning.**
+```
+███████╗██╗ ██████╗ ██╗  ██╗████████╗
+██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝
+███████╗██║██║  ███╗███████║   ██║
+╚════██║██║██║   ██║██╔══██║   ██║
+███████║██║╚██████╔╝██║  ██║   ██║
+╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+```
 
-A native macOS app that keeps a folder organized — by building meaning vectors of files and
-matching them against rules you write in plain language. Everything runs on-device.
+> **Your files, sorted by meaning.**
+> On your Mac. By a model that lives in your home folder.
+> No cloud. No accounts. No telemetry. Apache-2.0.
 
-</div>
-
-<div align="center">
-
-![macOS 27+](https://img.shields.io/badge/macOS-27%2B-black) ![Swift 6](https://img.shields.io/badge/Swift-6-blue) ![CoreAI](https://img.shields.io/badge/Core%20AI-Neural%20Engine-black)
-
-</div>
+[![macOS 27+](https://img.shields.io/badge/macOS-27%2B-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/mirasawe/Sight)
+[![License](https://img.shields.io/badge/license-Apache--2.0-000000?style=flat-square&labelColor=ffffff&color=000000)](./LICENSE)
+[![Open source](https://img.shields.io/badge/open-source-000000?style=flat-square&labelColor=ffffff&color=000000)](https://github.com/mirasawe/Sight)
 
 ---
 
-Sight watches a folder (usually `~/Downloads`) and sorts newly dropped files into
-meaning-based categories. It has no cloud and no telemetry. It is one local embedding model + a rules engine + a review screen.
+## The idea
+
+Your Mac is already smart enough.
+
+Sight gives the neural engine your files — **to read, not to scan** — and sorts
+them by meaning. The model is a 632 MB text tower (plus an optional vision
+tower), specialized once for this app, resident in your home folder. Downloads
+read, sorted, archived. The network card takes a nap.
+
+It is one quiet project, for one quiet folder.
 
 ## What it does
 
-1. **Drop a folder.** Sight monitors it (`FSEvents`) and proposes a category for each file
-   using an on-device embedding.
-2. **Review or auto-accept.** In `Review` mode Sight asks you before it moves anything.
-   In `Auto` mode it sorts files quietly using a similarity threshold you control.
-3. **Write rules in words.** Each rule is a sentence ("design files, mockups, screenshots").
-   Sight converts it to an embedding fingerprint at startup and compares every new file
-   against all rule fingerprints.
-4. **Learn from the outcome.** The journal records every move, so you can undo.
+- **Reads** a file the way a careful human would — name, content, context.
+- **Decides** where it belongs, with a confidence score you can see.
+- **Files** it, or asks you first, depending on the mode you chose.
+- **Never leaves the Mac.** Zero sockets. Zero accounts. Zero cloud.
+
+Two modes. **Review** — every move waits for your nod. **Auto** — Sight files
+on its own and shows you the receipt. Switch any time. One folder, one app.
 
 ## How it decides
 
-Every file gets a calibrated probability per rule, built from three kinds of evidence:
-
-1. **What the file is** (instant, no model): extension and type, name conventions such as
-   `Screenshot …` / `IMG_…` / `Снимок экрана …`, and image metadata (camera EXIF, exact device
-   screen size). A `.mp4` is never a document; an iPhone-sized PNG is a screenshot.
-2. **What it says**: the cleaned name plus real content (PDF, DOCX, RTF, HTML, XLSX/PPTX text,
-   plain text) is embedded and matched against every *idea* in a rule's description.
-3. **What you taught it**: files you approve, or move to another category in Review, become
-   examples that pull similar files the same way next time.
-
-Files above your confidence bar are sorted automatically in Auto mode. Everything else still gets
-a proposal in Review with a one-line reason, so nothing is left behind. Each sweep is one undo step.
-
-Measured on the real on-device model (`-SIGHT_EVAL`, debug builds): 98.8% top-1 on a 105-file
-mixed corpus and 95% on a real Downloads folder, with 98–100% precision on auto-sorted files.
-
-## Why it is fast
-
-Sight's engine is the Apple `CoreAI` runtime running:
-
-- an **EmbeddingGemma 2 text tower** (~632 MB, Neural Engine preferred), and
-- an **EmbeddingGemma 2 vision tower** (~306 MB, optional but on by default).
-
-Text inference is ~5 ms and image inference ~0.5 s on the Neural Engine. Preparing a picture
-for the model used to cost more than the model itself; it now costs almost nothing, which
-makes a folder of screenshots **3.8× faster** to sort (118 s → 31 s for 33 real screenshots).
-The first launch specializes the towers for this app; that is
-the 3–4 minute "Preparing" step. Later launches are 1–3 seconds.
-
-Run `Sight -SIGHT_BENCH <folder>` to measure it on your own pictures.
-
-## What is where
+Sight builds a *meaning vector* of each file and matches it against rules you
+write in plain language — *"design files, mockups, screenshots"* — not regex,
+not extensions. Each rule carries a **fingerprint**: a small, readable
+signature of what the rule learned. You can see why a file went where it went.
 
 ```
-Sight/                 The macOS app target (SwiftUI + AppKit bridging, thin)
-SightCore/             SPM package: engine, persistence, the rules engine and tests
-SightTests/            Small XCTest suite for the app-level model
-SightUITests/          Screenshot & flow tests (demo mode, real setup, second run)
-docs/                  Architecture, design, demo mode
-scripts/               Local scripts (lint, test)
-.github/workflows/     CI: SightCore unit tests + swift-format check
+invoice_2026_0032.xlsx  →  Invoices     · 90%  ·  4 ms
+IMG_4032.HEIC           →  Screenshots   · 98%  ·  3 ms
+backup_2026.zip         →  Archives      · 96%  ·  4 ms
 ```
 
-## Docs
+Thirteen filed. One left for you. Zero bytes left the Mac.
 
-| File | What it explains |
-| --- | --- |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the app and SightCore fit together |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | The design system, sidebar, themes |
-| [`docs/DEMO.md`](docs/DEMO.md) | The `-SightDemo` flag used by UI tests |
-| [`docs/MODEL.md`](docs/MODEL.md) | Core AI model store, first-load specialization, cache |
+## Privacy, stated plainly
 
-## Building
+If it's not on your Mac, it doesn't exist.
 
-```sh
-xcodebuild -scheme Sight -configuration Debug \
-  -destination 'platform=macOS' -derivedDataPath .build/DerivedData
+- The engine is **resident**, not streamed.
+- The network card is **offline by construction** — `lsof` shows zero sockets.
+- No telemetry, no analytics, no crash reporters phoning home.
+- You own the model. You own the rules. You own the folder.
+
+## Quick start
+
+```bash
+# build the app
+open Sight.xcodeproj
+# ⌘R in Xcode  (macOS 27+, Apple Silicon)
+
+# or, the landing site
+cd sight-landing
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open `Sight.xcodeproj` in Xcode 27 and press `⌘R`. The app is sandboxed; the model lives in
-the app's `Application Support/Sight/Models/EmbeddingGemma2` folder inside the container.
+The local model (~932 MB) downloads once, on first launch, into your home
+folder. After that, everything is air-gapped.
 
-## Running the tests
+## The landing
 
-```sh
-xcodebuild -scheme Sight -destination 'platform=macOS' test
-```
+`sight-landing/` is a standalone Next.js 16 site (Tailwind 4, motion, lucide).
+Monochrome by design — any color is a bug. It ships the same tokens as the app.
 
-SightCore can also run standalone:
-
-```sh
-cd SightCore && swift test --scratch-path .build
+```bash
+cd sight-landing
+npm run build      # static export → out/
+npm run lint       # eslint, zero warnings
 ```
 
 ## Contributing
 
-Small PRs welcome. Keep the design system pure SwiftUI where possible and don't add
-dependencies to the app target for the sake of it. Run the tests before submitting.
+Pull requests welcome. Keep it quiet:
+
+- Monochrome only. Big type, bold scale, responsive on every device.
+- Less text, more motion. One orchestrated moment per section.
+- Real interactivity over decoration.
+
+See [`docs/DESIGN.md`](./docs/DESIGN.md) and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+## Credits
+
+Made by **[Miras Kustaibek](https://github.com/mirasawe)**.
+
+If you search my name, this project should be the first thing you find.
 
 ## License
 
-Apache 2.0. See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).
+Apache-2.0. See [`LICENSE`](./LICENSE) and [`THIRD_PARTY_LICENSES.md`](./THIRD_PARTY_LICENSES.md).
+
+---
+
+*Sight — one folder, one app, zero cloud.*
