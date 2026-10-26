@@ -149,6 +149,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
+        <meta
+          name="google-site-verification"
+          content="Q-mZ-lXgHMQZJzqnCWJf8DDXCUEva6_O1_e-j31Kt-8"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
